@@ -3,6 +3,9 @@ import { useRef, useState } from 'react';
 import { Button, StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
 import { matchFeatures } from '@/components/matchFeatures';
 import { matchCard } from '@/actions/matchCard';
+import { Link } from 'expo-router';
+import { fetchCardInfo } from '@/actions/cardPrice';
+import { A } from '@expo/html-elements';
 
 export default function App() {
   const [facing, setFacing] = useState<CameraType>('back');
@@ -12,6 +15,9 @@ export default function App() {
   const [orientation, setOrientation] = useState<CameraOrientation>(1)
   //result of fetch
   const [result, setResult] = useState<string | null>(null);
+  //card info
+  const [cardInfo, setCardInfo] = useState<any | null>(null);
+  const [cardName, setCardName] = useState<string | null>(null);
 
   if (!permission) {
     // Camera permissions are still loading.
@@ -28,11 +34,23 @@ export default function App() {
     );
   }
 
+  function spinner() {
+    return (
+        <Text style={styles.message}>Loading...</Text>
+    );
+  }
+
   function toggleCameraFacing() {
     setFacing(current => (current === 'back' ? 'front' : 'back'));
   }
 
   async function takePhoto() {
+    setPhotoUri(null); // Clear the previous photo URI
+    setResult(null);
+    setCardName(null);
+    setCardInfo(null);
+
+
     //get lowest size getAvailablePictureSizesAsync()
     const availablePictureSizes = await cameraRef.current?.getAvailablePictureSizesAsync();
     console.log(availablePictureSizes);
@@ -47,6 +65,7 @@ export default function App() {
 
     if (cameraRef.current) {
       const photo = await cameraRef.current.takePictureAsync({
+        shutterSound: false,
       });
       setPhotoUri(photo.uri); // Save the photo URI to state
 
@@ -54,6 +73,15 @@ export default function App() {
       // Define referenceFeatures with appropriate data
       let result = await matchCard(photo.uri);
       setResult(result);
+
+      const cardName = JSON.parse(result).best_match?.replace(".webp", "");
+      setCardName(cardName);
+
+
+      // get card info
+      let cardInfo = await fetchCardInfo(cardName);
+      // let cardInfo = null;
+      setCardInfo(cardInfo);
 
       // Display the result as a text on top of the screen
 
@@ -63,19 +91,22 @@ export default function App() {
 
   return (
     <View style={styles.container}>
-      {result && (  // Display the result if it's available
+      {result && cardName && (  // Display the result if it's available
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
           <View style={{ flex: 1, paddingLeft: 10 }}>
-            <Text style={styles.message}>Result: {result}</Text>
-            <Text>http://0.0.0.0:8000/displayImage?filename={JSON.parse(result).best_match}</Text>
+            <Text style={styles.message}>Name: {cardName || spinner()}</Text>
+            <Text style={styles.message}>Availability: {cardInfo?.availability || spinner()}</Text>
+            <Text style={styles.message}>Price: {cardInfo?.price || spinner()}</Text>
+            <A style={{textDecorationLine: 'underline', color: 'blue'}} href={cardInfo?.link || ''}>Card Market Link</A>
+            {/* <Link href={`https://www.cardmarket.com/en/DragonBallSuper/Products/Search?searchString=${JSON.parse(result).best_match?.replace(".webp", "")}`}>{JSON.parse(result).best_match}</Link> */}
 
           </View>
           {photoUri && <Image source={{ uri: photoUri }} style={[styles.capturedImage, { flex: 1 }]} />}
-          {photoUri && <Image source={{ uri: 'http://0.0.0.0:8000/displayImage?filename=' + JSON.parse(result).best_match }} style={[styles.capturedImage, { flex: 1 }]} />}
+          {<Image source={{ uri: 'https://www.dbs-cardgame.com/fw/images/cards/card/en/' + JSON.parse(result).best_match }} style={[styles.capturedImage, { flex: 1 }]} />}
 
         </View>
       )}
-        <CameraView style={styles.camera} facing={facing} ref={cameraRef} pictureSize='1080x1920'   responsiveOrientationWhenOrientationLocked={true}
+        <CameraView style={styles.camera} facing={facing} ref={cameraRef} pictureSize='1080x1920' responsiveOrientationWhenOrientationLocked={true}
         onResponsiveOrientationChanged={(e) => onSetOrientation(e.orientation)}>
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.button} onPress={toggleCameraFacing}>
