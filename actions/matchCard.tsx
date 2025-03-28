@@ -30,9 +30,8 @@ export async function matchCard(uri: string): Promise<string> {
 
         //hello world
         // fetch("http://192.168.1.3:8000").then(response => response.text()).then(result => console.log(result)).catch(error => console.log('error', error));
-
         // Perform the fetch request
-        const result = await fetch("https://db-fusion-world-scanner-backend.vercel.app/matchCard", requestOptions);
+        const result = await fetch("http://192.168.1.3:8000/matchCard", requestOptions);
         const textResult = await result.text();
         console.log(textResult);
         return textResult
