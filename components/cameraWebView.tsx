@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Text, View } from 'react-native';
 import style from './style';
+import { API_ENDPOINT } from '@/constatns/apiConfig';
 
 interface CameraWebViewProps {
   setResult: (result: string) => void;
@@ -45,7 +46,7 @@ const CameraWebView: React.FC<CameraWebViewProps> = ({ setResult, setCardName })
       formData.append('file', blob, 'photo.png');
 
       try {
-        const response = await fetch('http://192.168.1.3:8000/matchCard', {
+        const response = await fetch(`${API_ENDPOINT}/matchCard`, {
           method: 'POST',
           body: formData,
         });

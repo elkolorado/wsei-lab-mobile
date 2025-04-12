@@ -1,5 +1,4 @@
-import * as FileSystem from 'expo-file-system';
-import * as mime from 'mime'
+import { API_ENDPOINT } from "@/constatns/apiConfig";
 
 export async function matchCard(uri: string): Promise<string> {
     try {
@@ -31,7 +30,7 @@ export async function matchCard(uri: string): Promise<string> {
         //hello world
         // fetch("http://192.168.1.3:8000").then(response => response.text()).then(result => console.log(result)).catch(error => console.log('error', error));
         // Perform the fetch request
-        const result = await fetch("http://192.168.1.3:8000/matchCard", requestOptions);
+        const result = await fetch(`${API_ENDPOINT}/matchCard`, requestOptions);
         const textResult = await result.text();
         console.log(textResult);
         return textResult

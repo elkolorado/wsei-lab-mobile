@@ -1,5 +1,6 @@
+import { API_ENDPOINT } from "@/constatns/apiConfig";
 export async function fetchCardInfo(cardName: string): Promise<any> {
-    const url = `http://192.168.1.3:8000/cardInfo?cardname=${encodeURIComponent(cardName)}`;
+    const url = `${API_ENDPOINT}/cardInfo?cardname=${encodeURIComponent(cardName)}`;
     
     try {
         const response = await fetch(url);
