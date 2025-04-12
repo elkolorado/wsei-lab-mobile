@@ -6,6 +6,8 @@ import { matchCard } from '@/actions/matchCard';
 import { Link } from 'expo-router';
 import { fetchCardInfo } from '@/actions/cardPrice';
 import { A } from '@expo/html-elements';
+import style from '@/components/style';
+import  CameraWebView from '@/components/cameraWebView';
 
 export default function App() {
   const [facing, setFacing] = useState<CameraType>('back');
@@ -106,86 +108,7 @@ export default function App() {
 
         </View>
       )}
-        {Platform.OS == 'web' ? (
-                <View style={styles.container}>
-                  <Text style={styles.message}>Camera functionality for web</Text>
-                    <video
-                    id="webcam"
-                    autoPlay
-                    playsInline
-                    style={{ width: '100%', height: 'auto' }}
-                    ></video>
-                    <script>
-                    {`
-                      navigator.mediaDevices
-                      .getUserMedia({ video: true })
-                      .then((stream) => {
-                        const video = document.getElementById('webcam');
-                        if (video) {
-                        video.srcObject = stream;
-                        }
-                      })
-                      .catch((err) => {
-                        console.error('Error accessing webcam: ', err);
-                      });
-                    `}
-                    </script>
-                  <canvas id="canvas" style={{ display: 'none' }}></canvas>
-                  <button
-                  onClick={async () => {
-                    const video = document.getElementById('webcam') as HTMLVideoElement;
-                    const canvas = document.getElementById('canvas') as HTMLCanvasElement;
-                    const context = canvas.getContext('2d');
-
-                    if (video && context) {
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-                    const photoUri = canvas.toDataURL('image/png');
-                    
-                    console.log(photoUri)
-
-                    // setPhotoUri(photoUri); // Save the photo URI to state
-
-                    // Pass to matchCard
-                    // let result = await matchCard(photoUri);
-
-                    //send base64img as file in formdata to server
-                    let formData = new FormData();
-
-                    //save base64 as file 
-                    const blob = await (await fetch(photoUri)).blob();
-
-                    formData.append("file", blob, "photo.png");
-
-                    // formData.append("file", photoUri);
-                    const requestOptions = {
-                        method: "POST",
-                        body: formData,
-                    };
-                    const req = await fetch("http://192.168.1.3:8000/matchCard", requestOptions);
-
-                    const result = await req.text();
-                    
-
-
-                    setResult(result);
-
-                    const cardName = JSON.parse(result).best_match?.replace(".webp", "");
-                    setCardName(cardName);
-
-                    // // Get card info
-                    // let cardInfo = await fetchCardInfo(cardName);
-                    // setCardInfo(cardInfo);
-                    }
-                  }}
-                  >
-                  Take Photo
-                  </button>
-                </View>
-
-        ) : (
+        {Platform.OS == 'web' ? <CameraWebView setResult={setResult} setCardName={setCardName}/> : (
         <CameraView style={styles.camera} facing={facing} ref={cameraRef} pictureSize='1080x1920' responsiveOrientationWhenOrientationLocked={true}
         onResponsiveOrientationChanged={(e) => onSetOrientation(e.orientation)}>
           <View style={styles.buttonContainer}>
@@ -202,37 +125,4 @@ export default function App() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  message: {
-    textAlign: 'center',
-    paddingBottom: 10,
-  },
-  camera: {
-    flex: 1,
-  },
-  buttonContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: 'transparent',
-    margin: 64,
-  },
-  button: {
-    flex: 1,
-    alignSelf: 'flex-end',
-    alignItems: 'center',
-  },
-  text: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  capturedImage: {
-    // Display the captured image at the top of the screen
-    height: 100,
-    resizeMode: 'contain',
-  },
-});
+const styles = style();
