@@ -62,7 +62,7 @@ const FoundCardDetails: React.FC<FoundCardDetailsProps> = ({ cardName, cardInfo,
                                 onPress={() => {
                                     if (result) {
                                         const newCard = {
-                                            id: Date.now().toString(),
+                                            id: '',
                                             name: cardName || 'Unknown Card',
                                             image: 'https://www.dbs-cardgame.com/fw/images/cards/card/en/' + JSON.parse(result).best_match || '',
                                             quantity: 1,

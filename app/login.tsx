@@ -1,23 +1,20 @@
-import { useState } from "react";
-import { View, Text, TextInput, Button, StyleSheet, Alert } from "react-native";
+import React, { useState } from 'react';
+import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
+import { useSession } from '@/hooks/useAuth';
 
-interface LoginScreenProps {
-    onLoginSuccess: () => void;
-  }
+export default function LoginScreen() {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const { login } = useSession();
 
-export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  const handleLogin = () => {
-    if (email === "" || password === "") {
-      Alert.alert("Error", "Please fill in all fields.");
-      return;
+  const handleLogin = async () => {
+    let tryLogin = await login(username, password);
+    console.log('Login successful_', tryLogin);
+    if (tryLogin) {
+      console.log('Login successful');
+    } else {
+      console.log('Login failed');
     }
-
-    // Add your login logic here (e.g., API call)
-    // Alert.alert("Login Successful", `Welcome, ${email}!`);
-    onLoginSuccess();
   };
 
   return (
@@ -25,11 +22,9 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       <Text style={styles.title}>Login</Text>
       <TextInput
         style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
+        placeholder="Username"
+        value={username}
+        onChangeText={setUsername}
       />
       <TextInput
         style={styles.input}
@@ -46,22 +41,20 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
+    justifyContent: 'center',
+    padding: 16,
   },
   title: {
     fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    textAlign: 'center',
   },
   input: {
-    width: "100%",
-    height: 40,
-    borderColor: "gray",
     borderWidth: 1,
-    borderRadius: 5,
-    marginBottom: 15,
-    paddingHorizontal: 10,
+    borderColor: '#ccc',
+    borderRadius: 4,
+    padding: 8,
+    marginBottom: 16,
   },
 });

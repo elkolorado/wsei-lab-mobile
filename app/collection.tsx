@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, FlatList, Image, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { CardProvider, useCardContext } from './context/CardContext';
+import LoginScreen from './login';
+import { useSession } from '@/hooks/useAuth';
 
 interface Card {
     id: string;
@@ -10,12 +12,7 @@ interface Card {
     set: string;
 }
 
-// const cardData: Card[] = [
-//     { id: '1', name: 'Card A', image: 'https://www.dbs-cardgame.com/fw/images/cards/card/en/E-04.webp', quantity: 2, set: 'Set 1' },
-//     { id: '2', name: 'Card B', image: 'https://www.dbs-cardgame.com/fw/images/cards/card/en/E-04.webp', quantity: 5, set: 'Set 1' },
-//     { id: '3', name: 'Card C', image: 'https://www.dbs-cardgame.com/fw/images/cards/card/en/E-04.webp', quantity: 1, set: 'Set 2' },
-//     { id: '4', name: 'Card D', image: 'https://www.dbs-cardgame.com/fw/images/cards/card/en/E-04.webp', quantity: 3, set: 'Set 2' },
-// ];
+
 
 const Collection: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
@@ -23,11 +20,15 @@ const Collection: React.FC = () => {
     const [selectedCard, setSelectedCard] = useState<Card | null>(null);
     const [isModalVisible, setModalVisible] = useState(false);
     const { cardData } = useCardContext();
-    console.log(cardData);
+    const { session } = useSession();
+
+    if (!session) {
+        return <LoginScreen/>;
+    }
 
     const filteredCards = cardData.filter(
         (card) =>
-            card.set === activeSet &&
+            // card.set === activeSet &&
             card.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
@@ -52,7 +53,7 @@ const Collection: React.FC = () => {
             />
 
             {/* Tabs for Card Sets */}
-            <View style={styles.tabs}>
+            {/* <View style={styles.tabs}>
                 {['Set 1', 'Set 2'].map((set) => (
                     <TouchableOpacity
                         key={set}
@@ -62,7 +63,7 @@ const Collection: React.FC = () => {
                         <Text style={styles.tabText}>{set}</Text>
                     </TouchableOpacity>
                 ))}
-            </View>
+            </View> */}
 
             {/* Card Gallery */}
             <FlatList
@@ -73,7 +74,7 @@ const Collection: React.FC = () => {
                 renderItem={({ item }) => (
                     <TouchableOpacity style={styles.card} onPress={() => handleCardPress(item)}>
                         <View >
-                            <Image source={{ uri: item.image }} style={styles.cardImage} />
+                            <Image source={{ uri: 'https://www.dbs-cardgame.com/fw/images/cards/card/en/' + item.name }} style={styles.cardImage} />
                             <Text style={styles.cardName}>{item.name}</Text>
                             <Text style={styles.cardQuantity}>Quantity: {item.quantity}</Text>
                         </View>
@@ -88,7 +89,7 @@ const Collection: React.FC = () => {
                         <Text style={styles.modalCloseText}>Close</Text>
                     </TouchableOpacity>
                     {selectedCard && (
-                        <Image source={{ uri: selectedCard.image }} style={styles.fullscreenImage} />
+                        <Image source={{ uri: 'https://www.dbs-cardgame.com/fw/images/cards/card/en/' + selectedCard.name }} style={styles.fullscreenImage} />
                     )}
                 </View>
             </Modal>
