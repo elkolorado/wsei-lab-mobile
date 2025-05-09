@@ -2,14 +2,18 @@ import React, { useEffect } from 'react';
 import { Text, View } from 'react-native';
 import style from './style';
 import { API_ENDPOINT } from '@/constatns/apiConfig';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 
 interface CameraWebViewProps {
   setResult: (result: string) => void;
   setCardName: (cardName: string | null) => void;
+  setCardInfo: (cardInfo: any) => void;
+  setPhotoUri: (uri: string | null) => void;
 }
 
-const CameraWebView: React.FC<CameraWebViewProps> = ({ setResult, setCardName }) => {
+const CameraWebView: React.FC<CameraWebViewProps> = ({ setResult, setCardName, setCardInfo, setPhotoUri }) => {
   const styles = style();
+  const tabBarHeight = useBottomTabBarHeight(); // Get the tab bar height
 
   useEffect(() => {
     const initializeWebcam = async () => {
@@ -38,6 +42,7 @@ const CameraWebView: React.FC<CameraWebViewProps> = ({ setResult, setCardName })
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
       const photoUri = canvas.toDataURL('image/png');
+      setPhotoUri(photoUri); // Save the photo URI to state
       console.log(photoUri);
 
       // Send the photo to the server
@@ -66,7 +71,18 @@ const CameraWebView: React.FC<CameraWebViewProps> = ({ setResult, setCardName })
       <Text style={styles.message}>Camera functionality for web</Text>
       <video id="webcam" autoPlay playsInline style={{ width: '100%', height: '90vh' }}></video>
       <canvas id="canvas" style={{ display: 'none' }}></canvas>
-      <button onClick={handleTakePhoto}>Take Photo</button>
+      <button onClick={handleTakePhoto} style={{
+        position: 'absolute',
+        bottom: tabBarHeight,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        padding: 10,
+        backgroundColor: '#007BFF',
+        color: '#fff',
+        border: 'none',
+        borderRadius: 5,
+        zIndex: 100000,
+      }}>Take Photo</button>
     </View>
   );
 };

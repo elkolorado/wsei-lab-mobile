@@ -1,32 +1,33 @@
 import { useCameraPermissions } from 'expo-camera';
 import { useState } from 'react';
-import { Button, Text, View, Image, Platform } from 'react-native';
-import LoginScreen from './login'; // Import your login screen component
-import { Link } from 'expo-router';
-import { A } from '@expo/html-elements';
+import { Button, Text, View, Platform } from 'react-native';
+import LoginScreen from './login';
 import style from '@/components/style';
 import CameraWebView from '@/components/cameraWebView';
 import CameraViewMobile from '@/components/cameraViewMobile';
+import FoundCardDetails from '@/components/foundCardDetails';
+import { useSession } from '@/hooks/useAuth';
+import { ScrollView } from 'react-native'; 
 
 export default function App() {
   const [permission, requestPermission] = useCameraPermissions();
 
-  const [photoUri, setPhotoUri] = useState<string | null>(null); // State to store the photo URI
-  const [result, setResult] = useState<string | null>(null);
-  const [cardInfo, setCardInfo] = useState<any | null>(null);
-  const [cardName, setCardName] = useState<string | null>(null);
+  const [photoUri, setPhotoUri] = useState<string | null>(null); 
+  const [results, setResults] = useState<Array<{ cardName: string; cardInfo: any; photoUri: string; result: string }>>([]); 
+  const { session } = useSession(); 
 
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // Track login state
 
-  const handleLoginSuccess = () => {
-    setIsLoggedIn(true); // Set login state to true after successful login
+
+  const addResult = (cardName: string, cardInfo: any, photoUri: string, result: string) => {
+    setResults((prevResults) => [
+      { cardName, cardInfo, photoUri, result },
+      ...prevResults,
+    ]);
   };
 
-  if (!isLoggedIn) {
-    return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
+  if (!session) {
+    return <LoginScreen />;
   }
-
-  
 
   if (!permission) {
     return <View />;
@@ -47,37 +48,41 @@ export default function App() {
 
   return (
     <View style={styles.container}>
-      {result && cardName && (
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-          <View style={{ flex: 1, paddingLeft: 10 }}>
-            <Text>Name: {cardName || spinner()}</Text>
-            <Text>Availability: {cardInfo?.availability || spinner()}</Text>
-            <Text>Price: {cardInfo?.price || spinner()}</Text>
-            <A style={{ textDecorationLine: 'underline', color: 'blue' }} href={cardInfo?.link || ''}>
-              Card Market Link
-            </A>
-          </View>
-          {photoUri && <Image source={{ uri: photoUri }} style={[styles.capturedImage, { flex: 1 }]} />}
-          {
-            <Image
-              source={{
-                uri: 'https://www.dbs-cardgame.com/fw/images/cards/card/en/' + JSON.parse(result).best_match,
-              }}
-              style={[styles.capturedImage, { flex: 1 }]}
-            />
-          }
-        </View>
-      )}
       {Platform.OS == 'web' ? (
-        <CameraWebView setResult={setResult} setCardName={setCardName} />
+        <CameraWebView
+          setResult={(result) => {
+            const cardName = JSON.parse(result).best_match?.replace('.webp', '');
+            const cardInfo = {}; // Fetch or process card info here
+            addResult(cardName, cardInfo, photoUri || '', result);
+          }}
+          setCardName={() => { }}
+          setPhotoUri={setPhotoUri}
+          setCardInfo={() => { }}
+        />
       ) : (
         <CameraViewMobile
-          setResult={setResult}
-          setCardName={setCardName}
+          setResult={(result) => {
+            const cardName = JSON.parse(result).best_match?.replace('.webp', '');
+            const cardInfo = {}; // Fetch or process card info here
+            addResult(cardName, cardInfo, photoUri || '', result);
+          }}
+          setCardName={() => { }}
           setPhotoUri={setPhotoUri}
-          setCardInfo={setCardInfo}
+          setCardInfo={() => { }}
         />
       )}
+      <ScrollView style={{ maxHeight: 175, marginTop: 20 }}>
+        {results.map((item, index) => (
+          <FoundCardDetails
+            key={index}
+            cardName={item.cardName}
+            cardInfo={item.cardInfo}
+            photoUri={item.photoUri}
+            result={item.result}
+            spinner={spinner}
+          />
+        ))}
+      </ScrollView>
     </View>
   );
 }
