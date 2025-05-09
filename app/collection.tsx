@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, FlatList, Image, TouchableOpacity, StyleSheet, Modal } from 'react-native';
+import { View, Text, TextInput, FlatList, Image, TouchableOpacity, StyleSheet, Modal, Button } from 'react-native';
 import { CardProvider, useCardContext } from './context/CardContext';
 import LoginScreen from './login';
 import { useSession } from '@/hooks/useAuth';
@@ -21,9 +21,9 @@ const Collection: React.FC = () => {
     const [isModalVisible, setModalVisible] = useState(false);
     const { cardData } = useCardContext();
     const { session } = useSession();
-
+    const { addCard, removeCard } = useCardContext();
     if (!session) {
-        return <LoginScreen/>;
+        return <LoginScreen />;
     }
 
     const filteredCards = cardData.filter(
@@ -73,10 +73,23 @@ const Collection: React.FC = () => {
                 columnWrapperStyle={filteredCards.length % 4 !== 0 ? { justifyContent: 'flex-start' } : null}
                 renderItem={({ item }) => (
                     <TouchableOpacity style={styles.card} onPress={() => handleCardPress(item)}>
-                        <View >
+                        <View>
                             <Image source={{ uri: 'https://www.dbs-cardgame.com/fw/images/cards/card/en/' + item.name }} style={styles.cardImage} />
                             <Text style={styles.cardName}>{item.name}</Text>
-                            <Text style={styles.cardQuantity}>Quantity: {item.quantity}</Text>
+                            <View style={{ flexDirection: 'row', marginTop: 5, justifyContent: 'space-between', alignItems: 'center', zIndex: 9999 }}>
+
+                                <Button
+                                    title="-"
+                                    color="red"
+                                    onPress={() => removeCard(item.name.split('.webp')[0])}
+                                />
+
+                                <Text style={styles.cardQuantity}>Quantity: {item.quantity}</Text>
+                                <Button
+                                    title="+"
+                                    onPress={() => addCard({...item, name: item.name.split('.webp')[0]})}
+                                />
+                            </View>
                         </View>
                     </TouchableOpacity>
                 )}

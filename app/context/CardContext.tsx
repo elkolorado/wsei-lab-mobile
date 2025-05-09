@@ -15,6 +15,7 @@ interface CardContextProps {
     addCard: (newCard: Card) => Promise<void>;
     updateCardQuantity: (id: string, quantity: number) => Promise<void>;
     fetchCollection: () => Promise<void>;
+    removeCard: (id: string) => Promise<void>;
 }
 
 const CardContext = createContext<CardContextProps | undefined>(undefined);
@@ -84,6 +85,26 @@ export const CardProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
+    // Remove a card from the backend collection
+    const removeCard = async (id: string) => {
+        try {
+            const response = await fetch(`${API_ENDPOINT}/collection/removeCard`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${session}`,
+                },
+                body: JSON.stringify({ id }),
+            });
+            if (!response.ok) {
+                throw new Error('Failed to remove card');
+            }
+            fetchCollection();
+        } catch (error) {
+            console.error('Error removing card:', error);
+        }
+    }
+
     useEffect(() => {
         if (session) {
             fetchCollection();
@@ -91,7 +112,7 @@ export const CardProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [session]);
 
     return (
-        <CardContext.Provider value={{ cardData, addCard, updateCardQuantity, fetchCollection }}>
+        <CardContext.Provider value={{ cardData, addCard, updateCardQuantity, fetchCollection, removeCard }}>
             {children}
         </CardContext.Provider>
     );

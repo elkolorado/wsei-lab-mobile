@@ -1,5 +1,5 @@
 import { useCardContext } from '@/app/context/CardContext';
-import React from 'react';
+import React, { useState, JSX } from 'react';
 import { View, Text, Image, StyleSheet, Button } from 'react-native';
 import { Linking } from 'react-native';
 
@@ -17,7 +17,36 @@ interface FoundCardDetailsProps {
 }
 
 const FoundCardDetails: React.FC<FoundCardDetailsProps> = ({ cardName, cardInfo, photoUri, result, spinner }) => {
-    const { addCard } = useCardContext();
+    const { addCard, removeCard } = useCardContext();
+    const [isCardAdded, setIsCardAdded] = useState(false); // Track if the card is added
+    const [addedCardId, setAddedCardId] = useState<string | null>(null); // Store the card ID after adding
+
+    const handleAddCard = async () => {
+        if (result) {
+            const newCard = {
+                id: Date.now().toString(), // Generate a unique ID for the card
+                name: cardName || 'Unknown Card',
+                image: 'https://www.dbs-cardgame.com/fw/images/cards/card/en/' + JSON.parse(result).best_match || '',
+                quantity: 1,
+                set: 'Set 1',
+            };
+
+            await addCard(newCard); // Add the card to the collection
+            setAddedCardId(newCard.name); // Set the card ID
+            setIsCardAdded(true); // Mark the card as added
+        }
+    };
+
+    const handleRemoveCard = async () => {
+        if (addedCardId) {
+            // Logic to remove the card from the collection
+            console.log(`Removing card with ID: ${addedCardId}`);
+            await removeCard(addedCardId); // Call the remove card function
+            setIsCardAdded(false); // Reset the state
+            setAddedCardId(null); // Clear the card ID
+        }
+    };
+
     return (
         <View style={{ flexDirection: 'row', padding: 20, backgroundColor: 'rgba(255,255,255,1)', borderRadius: 10, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 3 }}>
             <View style={{ flex: 1, paddingRight: 10 }}>
@@ -56,22 +85,20 @@ const FoundCardDetails: React.FC<FoundCardDetailsProps> = ({ cardName, cardInfo,
                             </Button>
 
                         </View> */}
-                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <View style={{ flexDirection: 'column', alignItems: 'center' }}>
                             <Button
-                                title="💾 Save to my collection"
-                                onPress={() => {
-                                    if (result) {
-                                        const newCard = {
-                                            id: '',
-                                            name: cardName || 'Unknown Card',
-                                            image: 'https://www.dbs-cardgame.com/fw/images/cards/card/en/' + JSON.parse(result).best_match || '',
-                                            quantity: 1,
-                                            set: 'Set 1',
-                                        };
-                                        addCard(newCard);
-                                    }
-                                    // Use the context to add the card
-                                }} />
+                                title="💾 Save"
+                                onPress={handleAddCard}
+                            />
+                            {isCardAdded && (
+                                <Button
+                                    title="↩️ Undo"
+                                    onPress={handleRemoveCard}
+                                    color="red"
+                                />
+                            )
+                            }
+
                         </View>
                     </View>
                 </View>
