@@ -1,9 +1,31 @@
-# Welcome to your Expo app 👋
+# DragonBall Fusion World CardScanner  👋
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+## Features
+0. Login to your account
+- ![alt text](image-3.png)
+1. Detect card using template matching algorithm
+2. Display details & price of card (price WIP)
+- ![alt text](image.png)
+1. Save scanned card to collection
+- ![alt text](image-1.png)
+1. Browse cards in your collection & add/remove quantity
+-  ![alt text](image-2.png)
+
+## Work to be done
+- [ ] card prices (backend logic done, but requires caching for effective scraping)
+- [ ] create nice UI in figma
+- [ ] editing scanned card in case of mistake
+- [ ] manually adding card via name in collection
+- [ ] decks
+- [ ] export/import cards to deck or collection via standard pastebins in fusion world (client/other similar sites)
+- [ ] proxy creation in pdf
+- [ ] host this somewhere
+
+## Backend
+1. https://github.com/elkolorado/db-fusion-world-scanner-backend (currently private)
 
 ## Get started
-
+This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 1. Install dependencies
 
    ```bash
@@ -13,7 +35,8 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 2. Start the app
 
    ```bash
-    npx expo start
+    npx expo start #for android
+    npx expo web #for web
    ```
 
 In the output, you'll find options to open the app in a
@@ -24,16 +47,6 @@ In the output, you'll find options to open the app in a
 - [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
 
 You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
 
 ## Learn more
 
