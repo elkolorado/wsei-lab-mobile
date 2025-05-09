@@ -1,0 +1,181 @@
+import React, { useState } from 'react';
+import { View, Text, TextInput, FlatList, Image, TouchableOpacity, StyleSheet, Modal } from 'react-native';
+import { CardProvider, useCardContext } from './context/CardContext';
+
+interface Card {
+    id: string;
+    name: string;
+    image: string;
+    quantity: number;
+    set: string;
+}
+
+// const cardData: Card[] = [
+//     { id: '1', name: 'Card A', image: 'https://www.dbs-cardgame.com/fw/images/cards/card/en/E-04.webp', quantity: 2, set: 'Set 1' },
+//     { id: '2', name: 'Card B', image: 'https://www.dbs-cardgame.com/fw/images/cards/card/en/E-04.webp', quantity: 5, set: 'Set 1' },
+//     { id: '3', name: 'Card C', image: 'https://www.dbs-cardgame.com/fw/images/cards/card/en/E-04.webp', quantity: 1, set: 'Set 2' },
+//     { id: '4', name: 'Card D', image: 'https://www.dbs-cardgame.com/fw/images/cards/card/en/E-04.webp', quantity: 3, set: 'Set 2' },
+// ];
+
+const Collection: React.FC = () => {
+    const [searchQuery, setSearchQuery] = useState('');
+    const [activeSet, setActiveSet] = useState('Set 1');
+    const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+    const [isModalVisible, setModalVisible] = useState(false);
+    const { cardData } = useCardContext();
+    console.log(cardData);
+
+    const filteredCards = cardData.filter(
+        (card) =>
+            card.set === activeSet &&
+            card.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const handleCardPress = (card: Card) => {
+        setSelectedCard(card);
+        setModalVisible(true);
+    };
+
+    const closeModal = () => {
+        setSelectedCard(null);
+        setModalVisible(false);
+    };
+
+    return (
+        <View style={styles.container}>
+            {/* Search Bar */}
+            <TextInput
+                style={styles.searchBar}
+                placeholder="Search by name..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+            />
+
+            {/* Tabs for Card Sets */}
+            <View style={styles.tabs}>
+                {['Set 1', 'Set 2'].map((set) => (
+                    <TouchableOpacity
+                        key={set}
+                        style={[styles.tab, activeSet === set && styles.activeTab]}
+                        onPress={() => setActiveSet(set)}
+                    >
+                        <Text style={styles.tabText}>{set}</Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
+
+            {/* Card Gallery */}
+            <FlatList
+                data={filteredCards}
+                keyExtractor={(item) => item.id}
+                numColumns={4}
+                columnWrapperStyle={filteredCards.length % 4 !== 0 ? { justifyContent: 'flex-start' } : null}
+                renderItem={({ item }) => (
+                    <TouchableOpacity style={styles.card} onPress={() => handleCardPress(item)}>
+                        <View >
+                            <Image source={{ uri: item.image }} style={styles.cardImage} />
+                            <Text style={styles.cardName}>{item.name}</Text>
+                            <Text style={styles.cardQuantity}>Quantity: {item.quantity}</Text>
+                        </View>
+                    </TouchableOpacity>
+                )}
+            />
+
+            {/* Modal for Fullscreen Image */}
+            <Modal visible={isModalVisible} transparent={true} animationType="fade">
+                <View style={styles.modalContainer}>
+                    <TouchableOpacity style={styles.modalCloseButton} onPress={closeModal}>
+                        <Text style={styles.modalCloseText}>Close</Text>
+                    </TouchableOpacity>
+                    {selectedCard && (
+                        <Image source={{ uri: selectedCard.image }} style={styles.fullscreenImage} />
+                    )}
+                </View>
+            </Modal>
+        </View>
+    );
+};
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        padding: 10,
+        backgroundColor: '#fff',
+    },
+    searchBar: {
+        height: 40,
+        borderColor: '#ccc',
+        borderWidth: 1,
+        borderRadius: 5,
+        paddingHorizontal: 10,
+        marginBottom: 10,
+    },
+    tabs: {
+        flexDirection: 'row',
+        marginBottom: 10,
+    },
+    tab: {
+        flex: 1,
+        padding: 10,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 5,
+        marginHorizontal: 5,
+    },
+    activeTab: {
+        backgroundColor: '#007bff',
+        borderColor: '#007bff',
+    },
+    tabText: {
+        color: '#fff',
+    },
+    card: {
+        flex: 1,
+        margin: 5,
+        padding: 10,
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 5,
+        alignItems: 'center',
+    },
+    cardImage: {
+        width: 150,
+        height: 210,
+        marginBottom: 10,
+    },
+    cardName: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginBottom: 5,
+    },
+    cardQuantity: {
+        fontSize: 14,
+        color: '#555',
+    },
+    modalContainer: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalCloseButton: {
+        position: 'absolute',
+        top: 40,
+        right: 20,
+        padding: 10,
+        backgroundColor: '#fff',
+        borderRadius: 5,
+    },
+    modalCloseText: {
+        color: '#000',
+        fontWeight: 'bold',
+    },
+    fullscreenImage: {
+        width: '90%',
+        height: '80%',
+        resizeMode: 'contain',
+    },
+});
+
+export default Collection;
