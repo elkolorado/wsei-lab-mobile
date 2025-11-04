@@ -3,8 +3,8 @@ import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
 import { useSession } from '@/hooks/useAuth';
 
 export default function LoginScreen() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('123');
+  const [password, setPassword] = useState('123');
   const { login } = useSession();
 
   const handleLogin = async () => {

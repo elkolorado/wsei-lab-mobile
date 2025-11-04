@@ -1,15 +1,42 @@
 import { useCardContext } from '@/app/context/CardContext';
+import { API_ENDPOINT } from '../constatns/apiConfig';
 import React, { useState, JSX } from 'react';
 import { View, Text, Image, StyleSheet, Button } from 'react-native';
 import { Linking } from 'react-native';
 
+
+type CardMarketCard = {
+    id: number;
+    expansion_id: number;
+    cardMarketId: number;
+    name: string;
+    number: string;
+    rarity: string;
+    image_url: string;
+    card_url: string;
+    last_updated: string;
+    card_id: number;
+    available: number | null;
+    price: number | null;
+    available_foil: number | null;
+    price_foil: number | null;
+    from_price: number | null;
+    price_trend: number | null;
+    avg_30d: number | null;
+    avg_7d: number | null;
+    avg_1d: number | null;
+    versions_url: string;
+    printed_in: string;
+    reprints: string;
+    chart_data: {
+        date: string;
+        price: number;
+    }[];
+};
+
 interface FoundCardDetailsProps {
     cardName?: string;
-    cardInfo?: {
-        availability?: string;
-        price?: string;
-        link?: string;
-    };
+    cardInfo?: CardMarketCard;
     photoUri?: string;
     result?: string;
     spinner: () => JSX.Element;
@@ -50,14 +77,23 @@ const FoundCardDetails: React.FC<FoundCardDetailsProps> = ({ cardName, cardInfo,
     return (
         <View style={{ flexDirection: 'row', padding: 20, backgroundColor: 'rgba(255,255,255,1)', borderRadius: 10, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 3 }}>
             <View style={{ flex: 1, paddingRight: 10 }}>
-                <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 5 }}>Name: <span style={{ fontWeight: 'normal' }}>{cardName || spinner()}</span></Text>
-                <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 5 }}>Availability: <span style={{ fontWeight: 'normal' }}>{cardInfo?.availability || spinner()}</span></Text>
-                <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 5 }}>Price: <span style={{ fontWeight: 'normal' }}>{cardInfo?.price || spinner()}</span></Text>
-                <Text
-                    style={{ fontSize: 14, textDecorationLine: 'underline', color: 'blue' }}
-                    onPress={() => Linking.openURL(cardInfo?.link || '')}
-                >
-                    Card Market Link
+                <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 5 }}>
+                    Name:{' '}
+                    <Text
+                        style={{ fontWeight: 'normal', textDecorationLine: 'underline', color: 'blue' }}
+                        onPress={() => Linking.openURL(cardInfo?.card_url || '')}
+                    >
+                        {cardInfo?.name.replace("[Fusion World]", "") || spinner()}
+                    </Text>
+                </Text>
+                <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 5 }}>
+                    Availability: <Text style={{ fontWeight: 'normal' }}>{cardInfo?.available || spinner()}</Text>
+                </Text>
+                <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 5 }}>
+                    Price: <Text style={{ fontWeight: 'normal' }}>{`${cardInfo?.from_price} €` || spinner()}</Text>
+                </Text>
+                <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 5 }}>
+                    Trend: <Text style={{ fontWeight: 'normal' }}>{`${cardInfo?.price_trend} €` || spinner()}</Text>
                 </Text>
             </View>
             <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
@@ -67,7 +103,7 @@ const FoundCardDetails: React.FC<FoundCardDetailsProps> = ({ cardName, cardInfo,
                 {result && (
                     <Image
                         source={{
-                            uri: 'https://www.dbs-cardgame.com/fw/images/cards/card/en/' + JSON.parse(result).best_match,
+                            uri: `${API_ENDPOINT}/card-image/${JSON.parse(result).best_match}`,
                         }}
                         style={[styles.capturedImage, { borderRadius: 10 }]}
                     />

@@ -3,70 +3,68 @@ import { View } from "react-native";
 import style from './style';
 import { TouchableOpacity, Text } from "react-native";
 import { useRef, useState } from "react";
+import { matchCards } from '@/actions/matchCards';
 import { matchCard } from '@/actions/matchCard';
+
 import { fetchCardInfo } from '@/actions/cardPrice';
 
 
 interface CameraViewProps {
     setResult: (result: string) => void;
-    setCardName: (cardName: string | null) => void;
-    setCardInfo: (cardInfo: any) => void;
-    setPhotoUri: (uri: string | null) => void;
 }
 
-const CameraViewMobile: React.FC<CameraViewProps> = ({setResult, setCardName, setPhotoUri, setCardInfo}) => {
+const CameraViewMobile: React.FC<CameraViewProps> = ({setResult}) => {
     const [facing, setFacing] = useState<CameraType>('back');
-    const cameraRef = useRef<React.RefObject<CameraView>>(null);
+    const cameraRef = useRef<CameraView>(null);
     const styles = style();
 
     function toggleCameraFacing() {
         setFacing(current => (current === 'back' ? 'front' : 'back'));
       }
 
+    function onSetOrientation(orientation: string) {
+        console.log('Orientation changed:', orientation);
+      }
+
     async function takePhoto() {
-        setPhotoUri(null); // Clear the previous photo URI
-        setResult('');
-        setCardName(null);
-        setCardInfo(null);
+      console.log('takePhoto called', await cameraRef.current?.getAvailablePictureSizesAsync());
+      // setResult('');
     
-    
-        //get lowest size getAvailablePictureSizesAsync()
-        const availablePictureSizes = await cameraRef.current?.getAvailablePictureSizesAsync();
-        console.log(availablePictureSizes);
-        //pick medium file size from array by multiplying the size aaxbb
-        let sizes = availablePictureSizes.map((size) => {
+        let availablePictureSizes = undefined;
+        try {
+          availablePictureSizes = await cameraRef.current?.getAvailablePictureSizesAsync();
+          console.log('Available picture sizes:', availablePictureSizes);
+        } catch (err) {
+          console.log('Error getting available picture sizes:', err);
+        }
+        let sizes = availablePictureSizes?.map((size) => {
           let sizeArray = size.split("x");
           return parseInt(sizeArray[0]) * parseInt(sizeArray[1]);
         });
-        //pick medium size
-        // let mediumSize = availablePictureSizes[sizes.indexOf(Math.(...sizes))];
-        // console.log(mediumSize);
+        console.log('Calculated sizes:', sizes);
     
         if (cameraRef.current) {
+          console.log('Camera ref is valid, taking picture...');
           const photo = await cameraRef.current.takePictureAsync({
             shutterSound: false,
           });
-          setPhotoUri(photo.uri); // Save the photo URI to state
+          console.log('Photo taken:', photo);
     
-          //pass to mmachFeatures
-          // Define referenceFeatures with appropriate data
+          // let result = await matchCard(photo.uri);
+          // console.log('Result from matchCard:', result);
+          // setResult(result);
+    
           let result = await matchCard(photo.uri);
           setResult(result);
+
     
-          const cardName = JSON.parse(result).best_match?.replace(".webp", "");
-          setCardName(cardName);
-    
-    
-          // get card info
-          let cardInfo = await fetchCardInfo(cardName);
-          // let cardInfo = null;
-          setCardInfo(cardInfo);
-    
-          // Display the result as a text on top of the screen
-    
-    
+          // let cardInfo = await fetchCardInfo(cardName);
+          // console.log('Fetched card info:', cardInfo);
+        } else {
+          console.log('Camera ref is null, cannot take picture.');
         }
       }
+
 
 
     return (

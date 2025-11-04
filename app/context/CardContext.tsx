@@ -44,6 +44,7 @@ export const CardProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Add a card to the backend collection
     const addCard = async (newCard: Card) => {
+        console.log(newCard)
         try {
             const response = await fetch(`${API_ENDPOINT}/collection/add`, {
                 method: 'POST',

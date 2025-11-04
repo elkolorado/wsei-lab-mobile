@@ -51,8 +51,10 @@ export default function App() {
       {Platform.OS == 'web' ? (
         <CameraWebView
           setResult={(result) => {
-            const cardName = JSON.parse(result).best_match?.replace('.webp', '');
-            const cardInfo = {}; // Fetch or process card info here
+            const cardName = JSON.parse(result).card_details?.cardMarketId;
+            const cardInfo = JSON.parse(result).card_details; // Fetch or process card info here
+
+            console.log("called ehere", cardName, cardInfo)
             addResult(cardName, cardInfo, photoUri || '', result);
           }}
           setCardName={() => { }}
@@ -62,13 +64,10 @@ export default function App() {
       ) : (
         <CameraViewMobile
           setResult={(result) => {
-            const cardName = JSON.parse(result).best_match?.replace('.webp', '');
-            const cardInfo = {}; // Fetch or process card info here
+            const cardName = JSON.parse(result).card_details?.cardMarketId;
+            const cardInfo = JSON.parse(result).card_details; // Fetch or process card info here
             addResult(cardName, cardInfo, photoUri || '', result);
           }}
-          setCardName={() => { }}
-          setPhotoUri={setPhotoUri}
-          setCardInfo={() => { }}
         />
       )}
       <ScrollView style={{ maxHeight: 175, marginTop: 20 }}>

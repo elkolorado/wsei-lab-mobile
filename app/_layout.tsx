@@ -13,7 +13,5 @@ export default function RootLayout() {
         </Tabs>
       </CardProvider>
     </SessionProvider>
-
-    // <></>
   );
 }
