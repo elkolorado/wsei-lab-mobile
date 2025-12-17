@@ -7,6 +7,13 @@ export default function style(){
           flex: 1,
           justifyContent: 'center',
         },
+        mainBg: {
+          flex: 1,
+          backgroundImage: 'linear-gradient(to right bottom in oklab, rgb(10, 31, 46) 0%, rgb(19, 40, 56) 50%, rgb(30, 58, 74) 100%)'
+        },
+        primaryButton: {
+            backgroundColor: '#d4af37'
+        },
         message: {
           textAlign: 'center',
           paddingBottom: 10,

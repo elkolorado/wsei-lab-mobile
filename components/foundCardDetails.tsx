@@ -15,6 +15,7 @@ type CardMarketCard = {
     image_url: string;
     card_url: string;
     last_updated: string;
+    tcg_id: number;
     card_id: number;
     available: number | null;
     price: number | null;
@@ -103,7 +104,7 @@ const FoundCardDetails: React.FC<FoundCardDetailsProps> = ({ cardName, cardInfo,
                 {result && (
                     <Image
                         source={{
-                            uri: `${API_ENDPOINT}/card-image/${JSON.parse(result).best_match}`,
+                            uri: `${API_ENDPOINT}/card-image/${cardInfo?.tcg_id}/${JSON.parse(result).best_match}`,
                         }}
                         style={[styles.capturedImage, { borderRadius: 10 }]}
                     />

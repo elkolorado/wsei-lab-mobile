@@ -10,7 +10,8 @@ import { fetchCardInfo } from '@/actions/cardPrice';
 
 
 interface CameraViewProps {
-    setResult: (result: string) => void;
+  setResult: (result: string) => void;
+  setPhotoUri?: (uri: string | null) => void;
 }
 
 const CameraViewMobile: React.FC<CameraViewProps> = ({setResult}) => {
@@ -49,13 +50,18 @@ const CameraViewMobile: React.FC<CameraViewProps> = ({setResult}) => {
             shutterSound: false,
           });
           console.log('Photo taken:', photo);
-    
-          // let result = await matchCard(photo.uri);
-          // console.log('Result from matchCard:', result);
-          // setResult(result);
-    
+
+          const photoUri = photo.uri;
+          if (setPhotoUri) setPhotoUri(photoUri);
+
           let result = await matchCard(photo.uri);
-          setResult(result);
+          try {
+            const parsed = JSON.parse(result);
+            const wrapped = JSON.stringify({ apiResult: parsed, raw: result, photoUri });
+            setResult(wrapped);
+          } catch (e) {
+            setResult(JSON.stringify({ apiResult: null, raw: result, photoUri }));
+          }
 
     
           // let cardInfo = await fetchCardInfo(cardName);

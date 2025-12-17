@@ -1,12 +1,13 @@
 {
   "expo": {
+    "backgroundColor": "#0a0f14",
+    "userInterfaceStyle": "automatic",
     "name": "wsei-lab-mobile",
     "slug": "wsei-lab-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
-    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
@@ -18,9 +19,19 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#0a1f2e"
       },
       "package": "com.elkolorado.fusionworldscanner"
+    },
+    "androidStatusBar": {
+      "backgroundColor": "#0a0f14",
+      "barStyle": "light-content",
+      "translucent": true
+    },
+    "androidNavigationBar": {
+      "backgroundColor": "#0a0f14",
+      "barStyle": "light",
+      "translucent": true
     },
     "web": {
       "bundler": "metro",
@@ -35,7 +46,15 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#0a1f2e"
+        }
+      ],
+      [
+        "expo-navigation-bar",
+        {
+          "backgroundColor": "#0a0f14",
+          "barStyle": "light",
+          "position": "relative"
         }
       ]
     ],

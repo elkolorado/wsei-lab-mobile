@@ -7,14 +7,14 @@ import CameraWebView from '@/components/cameraWebView';
 import CameraViewMobile from '@/components/cameraViewMobile';
 import FoundCardDetails from '@/components/foundCardDetails';
 import { useSession } from '@/hooks/useAuth';
-import { ScrollView } from 'react-native'; 
-
+import { ScrollView } from 'react-native';
+import { Redirect } from 'expo-router';
 export default function App() {
   const [permission, requestPermission] = useCameraPermissions();
 
-  const [photoUri, setPhotoUri] = useState<string | null>(null); 
-  const [results, setResults] = useState<Array<{ cardName: string; cardInfo: any; photoUri: string; result: string }>>([]); 
-  const { session } = useSession(); 
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [results, setResults] = useState<Array<{ cardName: string; cardInfo: any; photoUri: string; result: string }>>([]);
+  const { session } = useSession();
 
 
 
@@ -26,7 +26,7 @@ export default function App() {
   };
 
   if (!session) {
-    return <LoginScreen />;
+    return <Redirect href="/login"/>;
   }
 
   if (!permission) {
@@ -51,11 +51,30 @@ export default function App() {
       {Platform.OS == 'web' ? (
         <CameraWebView
           setResult={(result) => {
-            const cardName = JSON.parse(result).card_details?.cardMarketId;
-            const cardInfo = JSON.parse(result).card_details; // Fetch or process card info here
+            // Expecting wrapped JSON: { apiResult, raw, photoUri }
+            try {
+              const parsed = JSON.parse(result);
+              if (parsed && parsed.apiResult !== undefined) {
+                const api = parsed.apiResult;
+                const cardName = api?.card_details?.cardMarketId || api?.best_match?.replace?.('.webp', '') || '';
+                const cardInfo = api?.card_details || api || null;
+                const sentPhoto = parsed.photoUri || '';
+                addResult(cardName, cardInfo, sentPhoto, parsed.raw || result);
+                return;
+              }
+            } catch (e) {
+              // fall through
+            }
 
-            console.log("called ehere", cardName, cardInfo)
-            addResult(cardName, cardInfo, photoUri || '', result);
+            // Fallback for old/raw result
+            try {
+              const raw = JSON.parse(result);
+              const cardName = raw.card_details?.cardMarketId;
+              const cardInfo = raw.card_details;
+              addResult(cardName, cardInfo, photoUri || '', result);
+            } catch (err) {
+              addResult('', null, photoUri || '', result);
+            }
           }}
           setCardName={() => { }}
           setPhotoUri={setPhotoUri}
@@ -63,10 +82,31 @@ export default function App() {
         />
       ) : (
         <CameraViewMobile
+          setPhotoUri={setPhotoUri}
           setResult={(result) => {
-            const cardName = JSON.parse(result).card_details?.cardMarketId;
-            const cardInfo = JSON.parse(result).card_details; // Fetch or process card info here
-            addResult(cardName, cardInfo, photoUri || '', result);
+            // Support wrapped result from mobile camera which may include photoUri
+            try {
+              const parsed = JSON.parse(result);
+              if (parsed && parsed.apiResult !== undefined) {
+                const api = parsed.apiResult;
+                const cardName = api?.card_details?.cardMarketId || api?.best_match?.replace?.('.webp', '') || '';
+                const cardInfo = api?.card_details || api || null;
+                const sentPhoto = parsed.photoUri || '';
+                addResult(cardName, cardInfo, sentPhoto, parsed.raw || result);
+                return;
+              }
+            } catch (e) {
+              // fall through
+            }
+
+            try {
+              const raw = JSON.parse(result);
+              const cardName = raw.card_details?.cardMarketId;
+              const cardInfo = raw.card_details;
+              addResult(cardName, cardInfo, photoUri || '', result);
+            } catch (err) {
+              addResult('', null, photoUri || '', result);
+            }
           }}
         />
       )}

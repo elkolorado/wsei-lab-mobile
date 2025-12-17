@@ -130,10 +130,15 @@ const CameraWebView: React.FC<CameraWebViewProps> = ({ setResult, setCardName, s
           body: formData,
         });
         const result = await response.text();
-        setResult(result);
-
-        const cardName = JSON.parse(result).best_match?.replace('.webp', '');
-        setCardName(cardName);
+        try {
+          const parsed = JSON.parse(result);
+          const wrapped = JSON.stringify({ apiResult: parsed, raw: result, photoUri });
+          setResult(wrapped);
+          const cardName = parsed.best_match?.replace('.webp', '') || parsed.card_details?.cardMarketId;
+          setCardName(cardName);
+        } catch (e) {
+          setResult(JSON.stringify({ apiResult: null, raw: result, photoUri }));
+        }
       } catch (error) {
         console.error('Error sending photo to server:', error);
       }
@@ -142,6 +147,65 @@ const CameraWebView: React.FC<CameraWebViewProps> = ({ setResult, setCardName, s
 
   const handleFlipCamera = () => {
     setFacingMode((prev) => (prev === 'user' ? 'environment' : 'user'));
+  };
+
+  // or call it on ctrl+V by calling clipboardmatchweb
+  useEffect(() => {
+    window.addEventListener('paste', clipboardMatchWeb);
+    return () => {
+      window.removeEventListener('paste', clipboardMatchWeb);
+    };
+  }, [setCardName, setPhotoUri, setResult]);
+  
+
+  const clipboardMatchWeb = async () => {
+    try {
+      // Try Async Clipboard API first
+      const cb = (navigator as any).clipboard;
+      if (cb && cb.read) {
+        const items: any[] = await cb.read();
+        for (const item of items) {
+          const imageType = (item.types || []).find((t: string) => t.startsWith('image/'));
+          if (imageType) {
+            const blob: Blob = await item.getType(imageType);
+            const photoUri = URL.createObjectURL(blob);
+            setPhotoUri(photoUri);
+
+            const formData = new FormData();
+            formData.append('file', blob, 'clipboard.png');
+            console.log('Sending clipboard image to server', formData);
+
+            try {
+              const response = await fetch(`${API_ENDPOINT}/matchCard`, {
+                method: 'POST',
+                body: formData,
+              });
+              const result = await response.text();
+              try {
+                const parsed = JSON.parse(result);
+                const wrapped = JSON.stringify({ apiResult: parsed, raw: result, photoUri });
+                setResult(wrapped);
+                const cardName = parsed.best_match?.replace('.webp', '') || parsed.card_details?.cardMarketId;
+                setCardName(cardName);
+              } catch (e) {
+                setResult(JSON.stringify({ apiResult: null, raw: result, photoUri }));
+              }
+            } catch (err) {
+              console.error('Error sending clipboard image to server:', err);
+            }
+
+            return;
+          }
+        }
+        console.error('No image found in clipboard items');
+        return;
+      }
+
+      // Fallback: rely on paste event (handled by window paste listener below)
+      console.error('Clipboard.read not supported in this browser');
+    } catch (err) {
+      console.error('Error reading clipboard: ', err);
+    }
   };
 
   return (
@@ -162,6 +226,18 @@ const CameraWebView: React.FC<CameraWebViewProps> = ({ setResult, setCardName, s
           borderRadius: 5,
           zIndex: 100000,
         }}>Take Photo</button>
+        <button onClick={clipboardMatchWeb} style={{
+          position: 'absolute',
+          bottom: tabBarHeight,
+          left: '38%',
+          transform: 'translateX(-50%)',
+          padding: 8,
+          backgroundColor: '#28a745',
+          color: '#fff',
+          border: 'none',
+          borderRadius: 5,
+          zIndex: 100000,
+        }}>Paste Image</button>
         {hasMultipleCameras && (
           <button onClick={handleFlipCamera} style={{
             position: 'absolute',

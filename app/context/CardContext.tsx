@@ -20,6 +20,8 @@ interface CardContextProps {
 
 const CardContext = createContext<CardContextProps | undefined>(undefined);
 
+export default CardContext;
+
 export const CardProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [cardData, setCardData] = useState<Card[]>([]);
     const { session } = useSession();
