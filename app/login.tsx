@@ -5,7 +5,7 @@ import style from '../components/style'
 import PrimaryButton from '@/components/primaryButton';
 import { LoginIcon } from '@/components/loginIcon';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../constatns/colors';
+import { colors } from '@/constants/themeColors';
 import { Redirect } from 'expo-router';
 
 export default function LoginScreen() {

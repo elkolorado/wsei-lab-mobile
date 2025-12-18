@@ -47,7 +47,8 @@ export default function App() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container]}>
+      <View style={styles.cameraContainer}>
       {Platform.OS == 'web' ? (
         <CameraWebView
           setResult={(result) => {
@@ -110,6 +111,7 @@ export default function App() {
           }}
         />
       )}
+      </View>
       <ScrollView style={{ maxHeight: 175, marginTop: 20 }}>
         {results.map((item, index) => (
           <FoundCardDetails

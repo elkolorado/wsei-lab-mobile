@@ -1,5 +1,5 @@
-import { useCardContext } from '@/app/context/CardContext';
-import { API_ENDPOINT } from '../constatns/apiConfig';
+import { useCardContext } from '@/context/CardContext';
+import { API_ENDPOINT } from '../constants/apiConfig';
 import React, { useState, JSX } from 'react';
 import { View, Text, Image, StyleSheet, Button } from 'react-native';
 import { Linking } from 'react-native';

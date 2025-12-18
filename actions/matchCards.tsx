@@ -1,4 +1,4 @@
-import { API_ENDPOINT } from "@/constatns/apiConfig";
+import { API_ENDPOINT } from "@/constants/apiConfig";
 
 export async function matchCards(uri: string): Promise<string> {
     try {

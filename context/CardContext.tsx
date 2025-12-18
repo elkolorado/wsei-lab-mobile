@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useSession } from '@/hooks/useAuth';
-import { API_ENDPOINT } from '@/constatns/apiConfig';
+import { API_ENDPOINT } from '@/constants/apiConfig';
 
 interface Card {
     id: string;

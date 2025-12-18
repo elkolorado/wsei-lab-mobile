@@ -1,15 +1,25 @@
 import { StyleSheet } from "react-native";
-
+import { colors } from "@/constants/themeColors";
 
 export default function style(){
     return StyleSheet.create({
         container: {
           flex: 1,
           justifyContent: 'center',
+          backgroundColor: colors.colorBackground,
+          paddingHorizontal: 16,
+          paddingTop: 16
         },
-        mainBg: {
+        cameraContainer: {
           flex: 1,
-          backgroundImage: 'linear-gradient(to right bottom in oklab, rgb(10, 31, 46) 0%, rgb(19, 40, 56) 50%, rgb(30, 58, 74) 100%)'
+                    borderWidth: 2,
+          borderColor: '#614a00ff',
+          maxWidth: 1506,
+          marginInline: "auto",
+          width: "100%",
+          borderRadius: 16,
+          overflow: 'hidden',
+          boxShadow: 'rgb(0,0,0) 0px 0px 0px 0px, rgb(0,0,0) 0px 0px 0px 0px, rgb(0,0,0) 0px 0px 0px 0px, oklab(0.766528 -0.00256398 0.138653 / 0.1) 0px 20px 25px -5px, oklab(0.766528 -0.00256398 0.138653 / 0.1)  0 8px 10px -6px',
         },
         primaryButton: {
             backgroundColor: '#d4af37'

@@ -1,4 +1,4 @@
-import { API_ENDPOINT } from "@/constatns/apiConfig";
+import { API_ENDPOINT } from "@/constants/apiConfig";
 export async function fetchCardInfo(cardName: string): Promise<any> {
     const url = `${API_ENDPOINT}/cardInfo?cardname=${encodeURIComponent(cardName)}`;
     

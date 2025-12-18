@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, FlatList, Image, TouchableOpacity, StyleSheet, Modal, Button } from 'react-native';
-import { CardProvider, useCardContext } from './context/CardContext';
+import { CardProvider, useCardContext } from '../context/CardContext';
 import LoginScreen from './login';
 import { useSession } from '@/hooks/useAuth';
 
@@ -8,7 +8,6 @@ interface Card {
     id: string;
     name: string;
     image: string;
-    quantity: number;
     set: string;
 }
 

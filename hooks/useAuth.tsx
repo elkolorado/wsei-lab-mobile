@@ -1,6 +1,6 @@
 import React, { useContext, createContext} from 'react';
 import { useStorageState } from './useStorageState';
-import { API_ENDPOINT } from '@/constatns/apiConfig';
+import { API_ENDPOINT } from '@/constants/apiConfig';
 
 const AuthContext = createContext<{
   login: (username: string, password: string) => Promise<boolean | void>;

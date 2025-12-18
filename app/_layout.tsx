@@ -1,21 +1,43 @@
 import { Tabs } from "expo-router";
-import { CardProvider } from "./context/CardContext";
+import { CardProvider } from "../context/CardContext";
 import { SessionProvider } from "@/hooks/useAuth";
 import { View, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import TopHeader from "@/components/topHeader";
-
+import { Platform } from "react-native";
+import { TAB_ROUTES } from "@/constants/tabRoutes";
 export default function RootLayout() {
   return (
     <SessionProvider>
       <CardProvider>
-        <Tabs>
-          <Tabs.Screen name="index" options={{
-            title: "Home", tabBarLabel: "Home", header: ({ navigation, route, options }) => <TopHeader navigation={navigation} route={route} options={options} /> }} />
-          <Tabs.Screen name="about" options={{ title: "About", tabBarLabel: "About", header: ({ navigation, route, options }) => <TopHeader navigation={navigation} route={route} options={options} /> }} />
-          <Tabs.Screen name="collection" options={{ title: "Collection", tabBarLabel: "Collection", header: ({ navigation, route, options }) => <TopHeader navigation={navigation} route={route} options={options} /> }} />
-          <Tabs.Screen name="login" options={{ title: "Login", tabBarLabel: "Login", href: null, headerShown: false, tabBarStyle: { display: 'none' } }} />
-          <Tabs.Screen name="cards" options={{ title: "Cards", tabBarLabel: "Cards", header: ({ navigation, route, options }) => <TopHeader navigation={navigation} route={route} options={options} /> }} />
+        <Tabs
+          screenOptions={{
+            header: ({ navigation, route, options }) => (
+              <TopHeader navigation={navigation} route={route} options={options} />
+            ),
+            tabBarStyle: Platform.select({
+              web: { display: 'none' },
+              default: { display: 'flex' }, // Shows on iOS and Android
+            }),
+          }}
+
+        >
+          {TAB_ROUTES.map((route) => (
+            <Tabs.Screen
+              key={route.name}
+              name={route.name}
+              options={{ title: route.label }}
+            />
+          ))}
+
+          <Tabs.Screen
+            name="login"
+            options={{
+              headerShown: false,
+              href: null,
+              tabBarStyle: { display: 'none' }
+            }}
+          />
         </Tabs>
       </CardProvider>
     </SessionProvider>

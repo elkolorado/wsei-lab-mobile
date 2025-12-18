@@ -6,12 +6,14 @@ interface Props {
   onPress?: (card: any) => void;
 }
 
-import { API_ENDPOINT } from '@/constatns/apiConfig';
+import { API_ENDPOINT } from '@/constants/apiConfig';
+import { colors } from '@/constants/themeColors';
 
 const CardItem: React.FC<Props> = ({ card, onPress }) => {
   const [aspectRatio, setAspectRatio] = useState<number | null>(null);
   // prefer image_url from API; fallback to constructed card-image endpoint
-  const imageUrl = `${API_ENDPOINT}/card-image/${card.tcg_id}/${card.cardMarketId}.jpg`;
+  const imageUrl = `${API_ENDPOINT}/card-image/${card.tcg_id}/${card.cardMarketId}.png`;
+  console.log('CardItem imageUrl:', imageUrl);
   const name = card.name || card.title || 'Unknown';
   const price = (card.from_price ?? card.fromPrice ?? card.price ?? card.avg_price ?? card.avgPrice);
   const price_foil = (card.price_foil ?? card.priceFoil ?? card.price_foil ?? null);
@@ -52,9 +54,9 @@ const CardItem: React.FC<Props> = ({ card, onPress }) => {
         <Text numberOfLines={1} style={styles.name}>{name}</Text>
         <View style={styles.row}>
           <Text style={styles.price}>{typeof price === 'number' ? `${price.toFixed(2)}€` : (price ? String(price) : '-')}{price_foil ? ` / ${Number(price_foil).toFixed(2)}€` : ''}</Text>
-          <Text style={styles.rarity}>{rarity}</Text>
+          {/* <Text style={styles.rarity}>{rarity}</Text> */}
         </View>
-        <Text style={styles.availability}>Avail: {String(availability)}{availability_foil ? ` / ${String(availability_foil)}` : ''}</Text>
+        {/* <Text style={styles.availability}>Avail: {String(availability)}{availability_foil ? ` / ${String(availability_foil)}` : ''}</Text> */}
       </View>
     </TouchableOpacity>
   );
@@ -66,9 +68,9 @@ const styles = StyleSheet.create({
     margin: 6,
     borderRadius: 6,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
   },
   image: {
     width: '100%',
@@ -93,6 +95,7 @@ const styles = StyleSheet.create({
   name: {
     fontWeight: '600',
     marginBottom: 4,
+    color: colors.foreground,
   },
   row: {
     flexDirection: 'row',
@@ -100,7 +103,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   price: {
-    color: '#2b8a3e',
+    color: colors.primary,
     fontWeight: '700',
   },
   rarity: {

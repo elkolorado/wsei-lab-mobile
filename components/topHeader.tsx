@@ -1,10 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { colors } from "../constatns/colors";
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native";
+import { colors } from "@/constants/themeColors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "@/hooks/useAuth";
-
+import { TAB_ROUTES } from "@/constants/tabRoutes";
+import { usePathname, useRouter } from "expo-router";
 type Props = {
     navigation?: any;
     route?: any;
@@ -13,39 +14,75 @@ type Props = {
 
 const TopHeader: React.FC<Props> = ({ navigation, route, options }) => {
     const insets = useSafeAreaInsets();
-      const { logout } = useSession();
-
+    const { logout } = useSession();
+    const router = useRouter();
+    const pathname = usePathname();
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
-            <View style={styles.row}>
-                <View style={styles.brandRow}>
-                    <View style={styles.logo}>
-                        <Text style={styles.logoEmoji}>📷</Text>
-                    </View>
+        <View style={[styles.container]}>
+            <View style={styles.topContainer}>
 
-                    <View>
-                        <Text style={styles.title}>TCG Scanner</Text>
-                        <Text style={styles.subtitle}>Scan & Collect</Text>
-                    </View>
-                </View>
+                <View style={[styles.row, styles.topRow, { paddingTop: insets.top + 12 }]}>
+                    <View style={styles.brandRow}>
+                        <View style={styles.logo}>
+                            <Text style={styles.logoEmoji}>📷</Text>
+                        </View>
 
-                <View style={styles.actionsRow}>
-                    <View style={styles.userWrap}>
-                        <View style={styles.userAvatar}>
-                            <Text style={styles.userInitials}>DU</Text>
+                        <View>
+                            <Text style={styles.title}>TCG Scanner</Text>
+                            <Text style={styles.subtitle}>Scan & Collect</Text>
                         </View>
                     </View>
 
-                    <TouchableOpacity
-                        onPress={logout}
-                        style={styles.logoutBtn}
-                        activeOpacity={0.8}
-                    >
-                        <Ionicons name="log-out-outline" size={20} color={colors.foreground} />
-                    </TouchableOpacity>
+                    <View style={styles.actionsRow}>
+                        <View style={styles.userWrap}>
+                            <View style={styles.userAvatar}>
+                                <Text style={styles.userInitials}>DU</Text>
+                            </View>
+                        </View>
+
+                        <TouchableOpacity
+                            onPress={logout}
+                            style={styles.logoutBtn}
+                            activeOpacity={0.8}
+                        >
+                            <Ionicons name="log-out-outline" size={20} color={colors.foreground} />
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </View>
+
+            {/* Bottom Row: Navigation Pills (Web Only) */}
+            {Platform.OS === "web" && (
+                <View style={styles.bottomContainer}>
+                    <View style={[styles.row, styles.bottomRow]}>
+                        <View style={styles.navRow}>
+                            {TAB_ROUTES.map((item) => {
+                                const itemPath = item.name === 'index' ? '/' : `/${item.name}`;
+                                const isActive = pathname === itemPath;
+
+                                return (
+                                    <TouchableOpacity
+                                        key={item.name}
+                                        onPress={() => router.push(itemPath as any)}
+                                        style={[styles.pill, isActive && styles.pillActive]}
+                                    >
+                                        <Ionicons
+                                            name={item.icon as any}
+                                            size={16}
+                                            color={isActive ? colors.card : colors.foreground}
+                                            style={{ marginRight: 8 }}
+                                        />
+                                        <Text style={[styles.pillText, isActive && styles.pillTextActive]}>
+                                            {item.label}
+                                        </Text>
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </View>
+                    </View>
+                </View>
+            )}
         </View>
     );
 };
@@ -54,13 +91,34 @@ export default TopHeader;
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: colors.card,
+    },
+
+    topContainer: {
         borderBottomWidth: 1,
         borderBottomColor: colors.border,
+        backgroundColor: colors.card,
+
+
+    },
+    bottomContainer: {
+        backgroundColor: colors.colorBackground,
+    },
+    row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+    topRow: {
+        maxWidth: 1536,
+
+        marginInline: "auto",
+        width: "100%",
         paddingHorizontal: 16,
         paddingVertical: 12,
     },
-    row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+    bottomRow: {
+        paddingHorizontal: 16,
+        maxWidth: 1536,
+        marginInline: "auto",
+        width: "100%",
+        paddingVertical: 20,
+    },
     brandRow: { flexDirection: "row", alignItems: "center" },
     logo: {
         width: 44,
@@ -108,5 +166,32 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: colors.primary,
         backgroundColor: colors.card,
+    },/* Navigation Pills Row */
+    navRow: {
+        flexDirection: "row",
+        gap: 12,
+        marginTop: 4,
+    },
+    pill: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 8,
+        backgroundColor: "rgba(255,255,255,0.03)",
+        borderWidth: 1,
+        borderColor: "rgba(255,255,255,0.1)",
+    },
+    pillActive: {
+        backgroundColor: colors.primary,
+        borderColor: colors.primary,
+    },
+    pillText: {
+        color: "#fff",
+        fontSize: 14,
+        fontWeight: "600",
+    },
+    pillTextActive: {
+        color: colors.card, // Dark text on gold background
     },
 });

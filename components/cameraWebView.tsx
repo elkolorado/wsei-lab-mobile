@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Text, View } from 'react-native';
 import style from './style';
-import { API_ENDPOINT } from '@/constatns/apiConfig';
+import { API_ENDPOINT } from '@/constants/apiConfig';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 
 interface CameraWebViewProps {
@@ -209,7 +209,7 @@ const CameraWebView: React.FC<CameraWebViewProps> = ({ setResult, setCardName, s
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingHorizontal: 16 }]}>
       <Text style={styles.message}>Camera functionality for web</Text>
       <video id="webcam" autoPlay playsInline style={{ width: '100%', height: '90vh' }}></video>
       <canvas id="canvas" style={{ display: 'none' }}></canvas>

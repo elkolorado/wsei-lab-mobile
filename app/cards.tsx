@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator, useWindowDimensions } from 'react-native';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator, useWindowDimensions, Platform } from 'react-native';
 import CardItem from '@/components/CardItem';
 import { Linking } from 'react-native';
 import { fetchExpansions, fetchCardsWithPrices, fetchCards } from '@/actions/cardsApi';
+import { colors } from '@/constants/themeColors';
+import { Picker } from '@react-native-picker/picker';
 
 const CardsView: React.FC = () => {
   const [expansions, setExpansions] = useState<string[]>([]);
@@ -21,11 +23,12 @@ const CardsView: React.FC = () => {
     let mounted = true;
     (async () => {
       try {
-        const exps = await fetchExpansions('riftbound');
+        const exps = await fetchExpansions('one piece');
         if (!mounted) return;
         if (Array.isArray(exps)) {
           setExpansions(exps.map((e: any) => e.name || e.title || String(e)));
-          setSelectedExpansion((exps[0] && (exps[0].name || exps[0].title || exps[0])) || null);
+          // setSelectedExpansion((exps[0] && (exps[0].name || exps[0].title || exps[0])) || null);
+          setSelectedExpansion(null);
         } else {
           // fallback: use keys if object
           setExpansions([]);
@@ -45,7 +48,7 @@ const CardsView: React.FC = () => {
       setLoading(true);
       try {
         // prefer cards with prices endpoint if available
-        const result = await fetchCardsWithPrices('riftbound');
+        const result = await fetchCardsWithPrices('one piece');
         if (!mounted) return;
         const cardsArray = Array.isArray(result) ? result : (result && result.cards) ? result.cards : [];
         setCards(cardsArray);
@@ -62,7 +65,7 @@ const CardsView: React.FC = () => {
       } catch (err) {
         console.warn('fetchCardsWithPrices failed, trying fetchCards', err);
         try {
-          const result = await fetchCards('riftbound');
+          const result = await fetchCards('one piece');
           if (!mounted) return;
           const cardsArray = Array.isArray(result) ? result : [];
           setCards(cardsArray);
@@ -173,121 +176,157 @@ const CardsView: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Cards Gallery</Text>
+      <View style={{ maxWidth: 1536, marginInline: 'auto', flex: 1, width: '100%' }}>
+        <Text style={styles.header}>Cards Gallery</Text>
 
-      {/* Filters bar */}
-      <View style={styles.filters}>
-        <TextInput
-          style={styles.search}
-          placeholder="Search cards by name"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
+        {/* Filters bar */}
+        <View style={styles.filters}>
+          <TextInput
+            style={styles.search}
+            placeholder="Search cards by name"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.expansionsRow}>
-          {['All', ...expansions].map((exp) => (
-            <TouchableOpacity key={exp} onPress={() => setSelectedExpansion(exp === 'All' ? null : exp)} style={[styles.expansionButton, (selectedExpansion === exp || (exp === 'All' && !selectedExpansion)) && styles.expansionActive]}>
-              <Text style={[styles.expansionText, (selectedExpansion === exp || (exp === 'All' && !selectedExpansion)) && styles.expansionTextActive]}>{exp}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+          <View style={styles.dropdownContainer}>
+            <Picker
+              selectedValue={selectedExpansion || 'All'}
+              onValueChange={(itemValue) =>
+                setSelectedExpansion(itemValue === 'All' ? null : itemValue)
+              }
+              style={styles.picker}
+              dropdownIconColor={colors.primary} // Matches your gold theme
+              mode="dropdown" // Android specific
+            >
+              <Picker.Item label="All Expansions" value="All" color={Platform.OS === 'ios' ? colors.primary : undefined} />
+              {expansions.map((exp) => (
+                <Picker.Item
+                  key={exp}
+                  label={exp}
+                  value={exp}
+                  color={Platform.OS === 'ios' ? '#fff' : undefined}
+                />
+              ))}
+            </Picker>
+          </View>
 
-        <View style={styles.rowControls}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
-            {rarities.map((r: string) => (
+          <View style={styles.rowControls}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
+              {/* {rarities.map((r: string) => (
               <TouchableOpacity key={r} onPress={() => setRarityFilter(r)} style={[styles.rarityButton, rarityFilter === r && styles.rarityActive]}>
                 <Text style={rarityFilter === r ? styles.rarityTextActive : styles.rarityText}>{r}</Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
+            ))} */}
+            </ScrollView>
 
-          <View style={styles.sortButtons}>
-            <TouchableOpacity
-              onPress={() => {
-                if (sortBy === 'price') setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-                else {
-                  setSortBy('price');
-                  setSortDir('desc');
-                }
-              }}
-              style={[styles.sortButton, sortBy === 'price' && styles.sortActive]}
-            >
-              <Text style={sortBy === 'price' ? styles.sortTextActive : styles.sortText}>Price {sortBy === 'price' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</Text>
-            </TouchableOpacity>
+            <View style={styles.sortButtons}>
+              <TouchableOpacity
+                onPress={() => {
+                  if (sortBy === 'price') setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+                  else {
+                    setSortBy('price');
+                    setSortDir('desc');
+                  }
+                }}
+                style={[styles.sortButton, sortBy === 'price' && styles.sortActive]}
+              >
+                <Text style={sortBy === 'price' ? styles.sortTextActive : styles.sortText}>Price {sortBy === 'price' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => {
-                if (sortBy === 'availability') setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-                else {
-                  setSortBy('availability');
-                  setSortDir('desc');
-                }
-              }}
-              style={[styles.sortButton, sortBy === 'availability' && styles.sortActive]}
-            >
-              <Text style={sortBy === 'availability' ? styles.sortTextActive : styles.sortText}>Availability {sortBy === 'availability' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</Text>
-            </TouchableOpacity>
+              {/* <TouchableOpacity
+                onPress={() => {
+                  if (sortBy === 'availability') setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+                  else {
+                    setSortBy('availability');
+                    setSortDir('desc');
+                  }
+                }}
+                style={[styles.sortButton, sortBy === 'availability' && styles.sortActive]}
+              >
+                <Text style={sortBy === 'availability' ? styles.sortTextActive : styles.sortText}>Availability {sortBy === 'availability' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</Text>
+              </TouchableOpacity> */}
 
-            <TouchableOpacity
-              onPress={() => {
-                if (sortBy === 'name') setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-                else {
-                  setSortBy('name');
-                  setSortDir('asc');
-                }
-              }}
-              style={[styles.sortButton, sortBy === 'name' && styles.sortActive]}
-            >
-              <Text style={sortBy === 'name' ? styles.sortTextActive : styles.sortText}>Name {sortBy === 'name' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  if (sortBy === 'name') setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+                  else {
+                    setSortBy('name');
+                    setSortDir('asc');
+                  }
+                }}
+                style={[styles.sortButton, sortBy === 'name' && styles.sortActive]}
+              >
+                <Text style={sortBy === 'name' ? styles.sortTextActive : styles.sortText}>Name {sortBy === 'name' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
 
-      {loading ? (
-        <ActivityIndicator style={{ marginTop: 40 }} />
-      ) : (
-        <WindowGrid
-          data={filtered}
-          renderCard={(item: any) => (
-            <CardItem
-              card={item}
-              onPress={(c: any) => {
-                const url = c?.card_url || c?.cardUrl || c?.card_url;
-                if (url) {
-                  Linking.openURL(String(url)).catch((err) => console.warn('Failed to open url', err));
-                } else {
-                  console.log('No card_url for', c);
-                }
-              }}
-            />
-          )}
-        />
-      )}
+        {loading ? (
+          <ActivityIndicator style={{ marginTop: 40 }} />
+        ) : (
+          <WindowGrid
+            data={filtered}
+            renderCard={(item: any) => (
+              <CardItem
+                card={item}
+                onPress={(c: any) => {
+                  const url = c?.card_url || c?.cardUrl || c?.card_url;
+                  if (url) {
+                    Linking.openURL(String(url)).catch((err) => console.warn('Failed to open url', err));
+                  } else {
+                    console.log('No card_url for', c);
+                  }
+                }}
+              />
+            )}
+          />
+        )}
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  header: { fontSize: 20, fontWeight: '700', padding: 12 },
+  container: { flex: 1, backgroundColor: colors.background },
+  header: { fontSize: 20, fontWeight: '700', padding: 12, color: colors.foreground },
   filters: { paddingHorizontal: 12 },
-  search: { height: 40, borderColor: '#ddd', borderWidth: 1, borderRadius: 6, paddingHorizontal: 8, marginBottom: 8 },
+  search: { height: 40, borderColor: '#ddd', borderWidth: 1, borderRadius: 6, paddingHorizontal: 8, marginBottom: 8, color: colors.foreground, backgroundColor: colors.inputBackground },
   expansionsRow: { marginBottom: 8 },
-  expansionButton: { paddingVertical: 6, paddingHorizontal: 10, marginRight: 8, borderRadius: 20, borderWidth: 1, borderColor: '#ddd' },
-  expansionActive: { backgroundColor: '#007bff', borderColor: '#007bff' },
-  expansionText: { color: '#333' },
-  expansionTextActive: { color: '#fff' },
+  expansionButton: { paddingVertical: 6, paddingHorizontal: 10, marginRight: 8, borderRadius: 20, borderWidth: 1, borderColor: '#ddd', color: colors.foreground },
+  expansionActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  expansionText: { color: colors.foreground },
+  expansionTextActive: { color: '#000', fontWeight: '700' },
   rowControls: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   rarityButton: { paddingVertical: 6, paddingHorizontal: 10, marginRight: 8, borderRadius: 16, borderWidth: 1, borderColor: '#ddd' },
   rarityActive: { backgroundColor: '#f0f0f0' },
-  rarityText: { color: '#333' },
+  rarityText: { color: colors.foreground },
   rarityTextActive: { color: '#000', fontWeight: '700' },
   sortButtons: { flexDirection: 'row', marginLeft: 8 },
   sortButton: { paddingVertical: 6, paddingHorizontal: 10, marginRight: 6, borderRadius: 6, borderWidth: 1, borderColor: '#ddd' },
-  sortActive: { backgroundColor: '#007bff', borderColor: '#007bff' },
-  sortText: { color: '#333' },
-  sortTextActive: { color: '#fff' },
+  sortActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  sortText: { color: colors.foreground },
+  sortTextActive: { color: '#000', fontWeight: '700' },
+  dropdownContainer: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    marginVertical: 10,
+    overflow: 'hidden', // Ensures the picker doesn't bleed out of borders
+  },
+  // picker: {
+  //   height: 50,
+  //   color: '#fff', // Text color for the selected item
+  //   width: '100%',
+  //   ...Platform.select({
+  //     web: {
+  //       outlineStyle: 'none',
+  //       backgroundColor: 'transparent',
+  //       cursor: 'pointer',
+  //     },
+  //   }),
+  // },
 });
 
 export default CardsView;
