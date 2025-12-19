@@ -3,6 +3,7 @@ import { API_ENDPOINT } from '../constants/apiConfig';
 import React, { useState, JSX } from 'react';
 import { View, Text, Image, StyleSheet, Button } from 'react-native';
 import { Linking } from 'react-native';
+import { colors } from '@/constants/themeColors';
 
 
 type CardMarketCard = {
@@ -76,8 +77,8 @@ const FoundCardDetails: React.FC<FoundCardDetailsProps> = ({ cardName, cardInfo,
     };
 
     return (
-        <View style={{ flexDirection: 'row', padding: 20, backgroundColor: 'rgba(255,255,255,1)', borderRadius: 10, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 3 }}>
-            <View style={{ flex: 1, paddingRight: 10 }}>
+        <View style={{ flexDirection: 'row', padding: 20, backgroundColor: colors.foreground, borderRadius: 10, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 3 }}>
+            <View style={{ flex: 1, paddingRight: 10, backgroundColor: colors.foreground }}>
                 <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 5 }}>
                     Name:{' '}
                     <Text

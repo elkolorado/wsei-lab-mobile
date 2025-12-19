@@ -1,14 +1,12 @@
 import { useCameraPermissions } from 'expo-camera';
 import { useState } from 'react';
 import { Button, Text, View, Platform } from 'react-native';
-import LoginScreen from './login';
 import style from '@/components/style';
 import CameraWebView from '@/components/cameraWebView';
 import CameraViewMobile from '@/components/cameraViewMobile';
-import FoundCardDetails from '@/components/foundCardDetails';
 import { useSession } from '@/hooks/useAuth';
-import { ScrollView } from 'react-native';
 import { Redirect } from 'expo-router';
+import ScannedCards from '@/components/scannedCards';
 export default function App() {
   const [permission, requestPermission] = useCameraPermissions();
 
@@ -42,9 +40,7 @@ export default function App() {
     );
   }
 
-  function spinner() {
-    return <Text style={styles.message}>Loading...</Text>;
-  }
+
 
   return (
     <View style={[styles.container]}>
@@ -112,18 +108,7 @@ export default function App() {
         />
       )}
       </View>
-      <ScrollView style={{ maxHeight: 175, marginTop: 20 }}>
-        {results.map((item, index) => (
-          <FoundCardDetails
-            key={index}
-            cardName={item.cardName}
-            cardInfo={item.cardInfo}
-            photoUri={item.photoUri}
-            result={item.result}
-            spinner={spinner}
-          />
-        ))}
-      </ScrollView>
+      <ScannedCards results={results} />
     </View>
   );
 }

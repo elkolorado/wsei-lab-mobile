@@ -7,6 +7,7 @@ import { LoginIcon } from '@/components/loginIcon';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/constants/themeColors';
 import { Redirect } from 'expo-router';
+import Badge from '@/components/badge';
 
 export default function LoginScreen() {
   const [username, setUsername] = useState('123');
@@ -92,11 +93,7 @@ export default function LoginScreen() {
   );
 }
 
-const Badge = ({ label, bgColor, textColor, borderColor }) => (
-  <View style={[styles.badgeBase, { backgroundColor: bgColor, borderColor: borderColor }]}>
-    <Text style={{ color: textColor, fontSize: 14 }}>{label}</Text>
-  </View>
-);
+
 
 
 
@@ -106,13 +103,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 16,
     backgroundColor: colors.colorBackground,
-  },  badgeBase: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-    margin: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
   }
 });

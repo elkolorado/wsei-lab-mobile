@@ -10,6 +10,32 @@ export default function style(){
           paddingHorizontal: 16,
           paddingTop: 16
         },
+        scannedCardsContainer: {
+          flex: 1,
+          marginTop: 16,
+          borderColor: "#d4af374d",
+          borderRadius: 16,
+          borderWidth: 2,
+          maxHeight: 175,
+          maxWidth: 1506,
+          marginInline: "auto",
+          width: "100%",
+          backgroundColor: colors.colorBackground          
+        },
+        noResultsContainer: {
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        noResultsMessage: {
+          fontSize: 16,
+          color: colors.mutedForeground,
+        },
+        noResultsSubMessage: {
+          paddingTop: 6,
+          fontSize: 14,
+          color: colors.mutedForeground,
+        },
         cameraContainer: {
           flex: 1,
                     borderWidth: 2,
