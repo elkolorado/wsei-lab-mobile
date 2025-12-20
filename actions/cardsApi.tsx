@@ -48,9 +48,22 @@ export async function fetchCardDetails(cardMarketId: number): Promise<any> {
   }
 }
 
+export async function fetchTCGs(): Promise<string[]> {
+  const url = `${CARDS_API_ENDPOINT}/tcgs/`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.error("fetchTCGs error:", err);
+    throw err;
+  }
+}
+
 export default {
   fetchCards,
   fetchCardsWithPrices,
   fetchExpansions,
   fetchCardDetails,
+  fetchTCGs,
 };

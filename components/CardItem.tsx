@@ -52,8 +52,8 @@ const CardItem: React.FC<Props> = ({ card, onPress }) => {
       <View style={styles.meta}>
         <Text numberOfLines={1} style={styles.name}>{name}</Text>
         <View style={styles.row}>
-          <Text style={styles.price}><FontAwesome6 name="arrow-up-short-wide" size={14}/> {typeof price === 'number' ? `${price.toFixed(2)}€` : (price ? String(price) : '-')}</Text>
-          <Text style={styles.price}><FontAwesome6 name="arrow-trend-up" size={14}/> {priceTrend ? `${Number(priceTrend).toFixed(2)}€` : ''}</Text>
+          <Text style={styles.price}><FontAwesome6 name="arrow-up-short-wide" size={14}/> {typeof price === 'number' ? `${price}€` : (price ? String(price) : '-')}</Text>
+          <Text style={styles.price}><FontAwesome6 name="arrow-trend-up" size={14}/> {priceTrend ? `${Number(priceTrend)}€` : ''}</Text>
           {/* <Text style={styles.rarity}>{rarity}</Text> */}
         </View>
         {/* <Text style={styles.availability}>Avail: {String(availability)}{availability_foil ? ` / ${String(availability_foil)}` : ''}</Text> */}

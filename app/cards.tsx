@@ -2,13 +2,15 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator, useWindowDimensions, Platform } from 'react-native';
 import CardItem from '@/components/CardItem';
 import { Linking } from 'react-native';
-import { fetchExpansions, fetchCardsWithPrices, fetchCards } from '@/actions/cardsApi';
+import { fetchExpansions, fetchCardsWithPrices, fetchCards, fetchTCGs } from '@/actions/cardsApi';
 import { colors } from '@/constants/themeColors';
 import { Picker } from '@react-native-picker/picker';
 
 const CardsView: React.FC = () => {
   const [expansions, setExpansions] = useState<string[]>([]);
   const [selectedExpansion, setSelectedExpansion] = useState<string | null>(null);
+  const [tcgs, setTCGs] = useState<string[]>([]);
+  const [selectedTCG, setSelectedTCG] = useState<string | null>(null);
   const [cards, setCards] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -18,80 +20,77 @@ const CardsView: React.FC = () => {
   const [sortBy, setSortBy] = useState<'price' | 'availability' | 'name' | 'priceTrend'>('price');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
-  const tcg_name = 'dragon ball fusion world';
+  const tcg_name = selectedTCG || 'riftbound';
 
-  // Try to load expansions on mount
+  // 1. Keep TCG fetch on mount only
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const exps = await fetchExpansions(tcg_name);
+        const tcgList = await fetchTCGs();
         if (!mounted) return;
-        if (Array.isArray(exps)) {
-          setExpansions(exps.map((e: any) => e.name || e.title || String(e)));
-          // setSelectedExpansion((exps[0] && (exps[0].name || exps[0].title || exps[0])) || null);
-          setSelectedExpansion(null);
-        } else {
-          // fallback: use keys if object
-          setExpansions([]);
+        if (Array.isArray(tcgList)) {
+          setTCGs(tcgList.map((t: any) => t.name));
         }
       } catch (err) {
-        console.warn('Could not fetch expansions, using empty list', err);
-        setExpansions([]);
+        console.warn('Could not fetch TCGs', err);
       }
     })();
     return () => { mounted = false };
   }, []);
 
-  // Fetch cards once on mount. We'll filter client-side when user switches expansions.
+  // 2. Combined Effect for Expansions AND Cards
+  // This triggers every time tcg_name (selectedTCG) changes
   useEffect(() => {
     let mounted = true;
-    const load = async () => {
+
+    const loadTcgData = async () => {
       setLoading(true);
+      // Reset filters and data when TCG changes to prevent UI ghosting
+      setCards([]);
+      setExpansions([]);
+      setSelectedExpansion(null);
+
       try {
-        // prefer cards with prices endpoint if available
-        const result = await fetchCardsWithPrices(tcg_name);
+        // Fetch Expansions and Cards in parallel for better performance
+        const [exps, cardResult] = await Promise.all([
+          fetchExpansions(tcg_name),
+          fetchCardsWithPrices(tcg_name).catch(() => fetchCards(tcg_name)) // Fallback if price fetch fails
+        ]);
+
         if (!mounted) return;
-        const cardsArray = Array.isArray(result) ? result : (result && result.cards) ? result.cards : [];
+
+        // Handle Expansions
+        if (Array.isArray(exps)) {
+          setExpansions(exps.map((e: any) => e.name || e.title || String(e)));
+        }
+
+        // Handle Cards
+        const cardsArray = Array.isArray(cardResult)
+          ? cardResult
+          : (cardResult && cardResult.cards) ? cardResult.cards : [];
+
         setCards(cardsArray);
 
-        // derive rarities from the API result
+        // Derive Rarities
         const raritySet = new Set<string>();
         cardsArray.forEach((c: any) => {
-          const r = (c.rarity || c.rarity_name || (c.rarity && c.rarity.name) || '').toString().trim();
+          const r = (c.rarity || c.rarity_name || c.rarity?.name || '').toString().trim();
           if (r) raritySet.add(r);
         });
-        const rarityList = ['All', ...Array.from(raritySet).sort((a, b) => a.localeCompare(b))];
-        setRarities(rarityList);
-        setRarityFilter('All');
-      } catch (err) {
-        console.warn('fetchCardsWithPrices failed, trying fetchCards', err);
-        try {
-          const result = await fetchCards(tcg_name);
-          if (!mounted) return;
-          const cardsArray = Array.isArray(result) ? result : [];
-          setCards(cardsArray);
+        setRarities(['All', ...Array.from(raritySet).sort()]);
 
-          const raritySet = new Set<string>();
-          cardsArray.forEach((c: any) => {
-            const r = (c.rarity || c.rarity_name || (c.rarity && c.rarity.name) || '').toString().trim();
-            if (r) raritySet.add(r);
-          });
-          const rarityList = ['All', ...Array.from(raritySet).sort((a, b) => a.localeCompare(b))];
-          setRarities(rarityList);
-          setRarityFilter('All');
-        } catch (err2) {
-          console.error('Could not fetch cards', err2);
-          setCards([]);
-          setRarities(['All']);
-        }
+      } catch (err) {
+        console.error('Error loading TCG data:', err);
       } finally {
         if (mounted) setLoading(false);
       }
     };
-    load();
+
+    loadTcgData();
+
     return () => { mounted = false };
-  }, []);
+  }, [tcg_name]); // <--- Crucial: Effect runs whenever this changes
 
   const getCardExpansionName = (c: any) => {
     // attempt several possible fields the API might return
@@ -199,7 +198,7 @@ const CardsView: React.FC = () => {
               onValueChange={(itemValue) =>
                 setSelectedExpansion(itemValue === 'All' ? null : itemValue)
               }
-              style={styles.picker}
+              // style={styles.picker}
               dropdownIconColor={colors.primary} // Matches your gold theme
               mode="dropdown" // Android specific
             >
@@ -209,6 +208,26 @@ const CardsView: React.FC = () => {
                   key={exp}
                   label={exp}
                   value={exp}
+                  color={Platform.OS === 'ios' ? '#fff' : undefined}
+                />
+              ))}
+            </Picker>
+
+            <Picker
+              selectedValue={selectedTCG || 'All'}
+              onValueChange={(itemValue) =>
+                setSelectedTCG(itemValue === 'All' ? null : itemValue)
+              }
+              // style={styles.picker}
+              dropdownIconColor={colors.primary} // Matches your gold theme
+              mode="dropdown" // Android specific
+            >
+              <Picker.Item label="All TCGs" value="All" color={Platform.OS === 'ios' ? colors.primary : undefined} />
+              {tcgs.map((tcg) => (
+                <Picker.Item
+                  key={tcg}
+                  label={tcg}
+                  value={tcg}
                   color={Platform.OS === 'ios' ? '#fff' : undefined}
                 />
               ))}
@@ -325,6 +344,9 @@ const styles = StyleSheet.create({
   sortText: { color: colors.foreground },
   sortTextActive: { color: '#000', fontWeight: '700' },
   dropdownContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 8,
     borderWidth: 1,
@@ -332,18 +354,20 @@ const styles = StyleSheet.create({
     marginVertical: 10,
     overflow: 'hidden', // Ensures the picker doesn't bleed out of borders
   },
-  // picker: {
-  //   height: 50,
-  //   color: '#fff', // Text color for the selected item
-  //   width: '100%',
-  //   ...Platform.select({
-  //     web: {
-  //       outlineStyle: 'none',
-  //       backgroundColor: 'transparent',
-  //       cursor: 'pointer',
-  //     },
-  //   }),
-  // },
+  picker: {
+    height: 50,
+    color: '#fff', // Text color for the selected item
+    width: '100%',
+    backgroundColor: 'transparent',
+    borderColor: 'transparent',
+    ...Platform.select({
+      // web: {
+      //   outlineStyle: 'none',
+      //   backgroundColor: 'transparent',
+      //   cursor: 'pointer',
+      // },
+    }),
+  },
 });
 
 export default CardsView;
