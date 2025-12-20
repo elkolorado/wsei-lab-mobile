@@ -12,80 +12,81 @@ import { fetchCardInfo } from '@/actions/cardPrice';
 interface CameraViewProps {
   setResult: (result: string) => void;
   setPhotoUri?: (uri: string | null) => void;
+  setCardName?: (cardName: string | null) => void;
 }
 
-const CameraViewMobile: React.FC<CameraViewProps> = ({setResult}) => {
-    const [facing, setFacing] = useState<CameraType>('back');
-    const cameraRef = useRef<CameraView>(null);
-    const styles = style();
+const CameraViewMobile: React.FC<CameraViewProps> = ({ setResult, setPhotoUri, setCardName }) => {
+  const [facing, setFacing] = useState<CameraType>('back');
+  const cameraRef = useRef<CameraView>(null);
+  const styles = style();
 
-    function toggleCameraFacing() {
-        setFacing(current => (current === 'back' ? 'front' : 'back'));
-      }
+  function toggleCameraFacing() {
+    setFacing(current => (current === 'back' ? 'front' : 'back'));
+  }
 
-    function onSetOrientation(orientation: string) {
-        console.log('Orientation changed:', orientation);
-      }
+  function onSetOrientation(orientation: string) {
+    console.log('Orientation changed:', orientation);
+  }
 
-    async function takePhoto() {
-      console.log('takePhoto called', await cameraRef.current?.getAvailablePictureSizesAsync());
-      // setResult('');
-    
-        let availablePictureSizes = undefined;
-        try {
-          availablePictureSizes = await cameraRef.current?.getAvailablePictureSizesAsync();
-          console.log('Available picture sizes:', availablePictureSizes);
-        } catch (err) {
-          console.log('Error getting available picture sizes:', err);
-        }
-        let sizes = availablePictureSizes?.map((size) => {
-          let sizeArray = size.split("x");
-          return parseInt(sizeArray[0]) * parseInt(sizeArray[1]);
-        });
-        console.log('Calculated sizes:', sizes);
-    
-        if (cameraRef.current) {
-          console.log('Camera ref is valid, taking picture...');
-          const photo = await cameraRef.current.takePictureAsync({
-            shutterSound: false,
-          });
-          console.log('Photo taken:', photo);
+  async function takePhoto() {
+    console.log('takePhoto called', await cameraRef.current?.getAvailablePictureSizesAsync());
+    // setResult('');
 
-          const photoUri = photo.uri;
-          if (setPhotoUri) setPhotoUri(photoUri);
+    let availablePictureSizes = undefined;
+    try {
+      availablePictureSizes = await cameraRef.current?.getAvailablePictureSizesAsync();
+      console.log('Available picture sizes:', availablePictureSizes);
+    } catch (err) {
+      console.log('Error getting available picture sizes:', err);
+    }
+    let sizes = availablePictureSizes?.map((size) => {
+      let sizeArray = size.split("x");
+      return parseInt(sizeArray[0]) * parseInt(sizeArray[1]);
+    });
+    console.log('Calculated sizes:', sizes);
 
-          let result = await matchCard(photo.uri);
-          try {
-            const parsed = JSON.parse(result);
-            const wrapped = JSON.stringify({ apiResult: parsed, raw: result, photoUri });
-            setResult(wrapped);
-          } catch (e) {
-            setResult(JSON.stringify({ apiResult: null, raw: result, photoUri }));
-          }
+    if (cameraRef.current) {
+      console.log('Camera ref is valid, taking picture...');
+      const photo = await cameraRef.current.takePictureAsync({
+        shutterSound: false,
+      });
+      console.log('Photo taken:', photo);
 
-    
-          // let cardInfo = await fetchCardInfo(cardName);
-          // console.log('Fetched card info:', cardInfo);
-        } else {
-          console.log('Camera ref is null, cannot take picture.');
-        }
+      const photoUri = photo.uri;
+      if (setPhotoUri) setPhotoUri(photoUri);
+
+      const result = await matchCard(photo.uri);
+      try {
+        const parsed = JSON.parse(result);
+        const wrapped = JSON.stringify({ apiResult: parsed, raw: result, photoUri });
+        setResult(wrapped);
+      } catch (e) {
+        setResult(JSON.stringify({ apiResult: null, raw: result, photoUri }));
       }
 
 
+      // let cardInfo = await fetchCardInfo(cardName);
+      // console.log('Fetched card info:', cardInfo);
+    } else {
+      console.log('Camera ref is null, cannot take picture.');
+    }
+  }
 
-    return (
-        <CameraView style={styles.camera} facing={facing} ref={cameraRef} pictureSize='1080x1920' responsiveOrientationWhenOrientationLocked={true}
-            onResponsiveOrientationChanged={(e) => onSetOrientation(e.orientation)}>
-            <View style={styles.buttonContainer}>
-                <TouchableOpacity style={styles.button} onPress={toggleCameraFacing}>
-                    <Text style={styles.text}>Flip Camera</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.button} onPress={takePhoto}>
-                    <Text style={styles.text}>Take Photo</Text>
-                </TouchableOpacity>
-            </View>
-        </CameraView>
-    )
+
+
+  return (
+    <CameraView style={styles.camera} facing={facing} ref={cameraRef} pictureSize='1080x1920' responsiveOrientationWhenOrientationLocked={true}
+      onResponsiveOrientationChanged={(e) => onSetOrientation(e.orientation)}>
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity style={styles.button} onPress={toggleCameraFacing}>
+          <Text style={styles.text}>Flip Camera</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={takePhoto}>
+          <Text style={styles.text}>Take Photo</Text>
+        </TouchableOpacity>
+      </View>
+    </CameraView>
+  )
 }
 
 export default CameraViewMobile;

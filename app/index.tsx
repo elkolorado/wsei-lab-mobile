@@ -24,7 +24,7 @@ export default function App() {
   };
 
   if (!session) {
-    return <Redirect href="/login"/>;
+    return <Redirect href="/login" />;
   }
 
   if (!permission) {
@@ -45,68 +45,69 @@ export default function App() {
   return (
     <View style={[styles.container]}>
       <View style={styles.cameraContainer}>
-      {Platform.OS == 'web' ? (
-        <CameraWebView
-          setResult={(result) => {
-            // Expecting wrapped JSON: { apiResult, raw, photoUri }
-            try {
-              const parsed = JSON.parse(result);
-              if (parsed && parsed.apiResult !== undefined) {
-                const api = parsed.apiResult;
-                const cardName = api?.card_details?.cardMarketId || api?.best_match?.replace?.('.webp', '') || '';
-                const cardInfo = api?.card_details || api || null;
-                const sentPhoto = parsed.photoUri || '';
-                addResult(cardName, cardInfo, sentPhoto, parsed.raw || result);
-                return;
+        {Platform.OS == 'web' ? (
+          <CameraWebView
+            setResult={(result) => {
+              // Expecting wrapped JSON: { apiResult, raw, photoUri }
+              try {
+                const parsed = JSON.parse(result);
+                if (parsed && parsed.apiResult !== undefined) {
+                  const api = parsed.apiResult;
+                  const cardName = api?.card_details?.cardMarketId || api?.best_match?.replace?.('.webp', '') || '';
+                  const cardInfo = api?.card_details || api || null;
+                  const sentPhoto = parsed.photoUri || '';
+                  addResult(cardName, cardInfo, sentPhoto, parsed.raw || result);
+                  return;
+                }
+              } catch (e) {
+                // fall through
               }
-            } catch (e) {
-              // fall through
-            }
 
-            // Fallback for old/raw result
-            try {
-              const raw = JSON.parse(result);
-              const cardName = raw.card_details?.cardMarketId;
-              const cardInfo = raw.card_details;
-              addResult(cardName, cardInfo, photoUri || '', result);
-            } catch (err) {
-              addResult('', null, photoUri || '', result);
-            }
-          }}
-          setCardName={() => { }}
-          setPhotoUri={setPhotoUri}
-          setCardInfo={() => { }}
-        />
-      ) : (
-        <CameraViewMobile
-          setPhotoUri={setPhotoUri}
-          setResult={(result) => {
-            // Support wrapped result from mobile camera which may include photoUri
-            try {
-              const parsed = JSON.parse(result);
-              if (parsed && parsed.apiResult !== undefined) {
-                const api = parsed.apiResult;
-                const cardName = api?.card_details?.cardMarketId || api?.best_match?.replace?.('.webp', '') || '';
-                const cardInfo = api?.card_details || api || null;
-                const sentPhoto = parsed.photoUri || '';
-                addResult(cardName, cardInfo, sentPhoto, parsed.raw || result);
-                return;
+              // Fallback for old/raw result
+              try {
+                const raw = JSON.parse(result);
+                const cardName = raw.card_details?.cardMarketId;
+                const cardInfo = raw.card_details;
+                addResult(cardName, cardInfo, photoUri || '', result);
+              } catch (err) {
+                addResult('', null, photoUri || '', result);
               }
-            } catch (e) {
-              // fall through
-            }
+            }}
+            setCardName={() => { }}
+            setPhotoUri={setPhotoUri}
+            setCardInfo={() => { }}
+          />
+        ) : (
+          <CameraViewMobile
+            setResult={(result) => {
+              // Support wrapped result from mobile camera which may include photoUri
+              try {
+                const parsed = JSON.parse(result);
+                if (parsed && parsed.apiResult !== undefined) {
+                  const api = parsed.apiResult;
+                  const cardName = api?.card_details?.cardMarketId || api?.best_match?.replace?.('.webp', '') || '';
+                  const cardInfo = api?.card_details || api || null;
+                  const sentPhoto = parsed.photoUri || '';
+                  addResult(cardName, cardInfo, sentPhoto, parsed.raw || result);
+                  return;
+                }
+              } catch (e) {
+                // fall through
+              }
 
-            try {
-              const raw = JSON.parse(result);
-              const cardName = raw.card_details?.cardMarketId;
-              const cardInfo = raw.card_details;
-              addResult(cardName, cardInfo, photoUri || '', result);
-            } catch (err) {
-              addResult('', null, photoUri || '', result);
-            }
-          }}
-        />
-      )}
+              try {
+                const raw = JSON.parse(result);
+                const cardName = raw.card_details?.cardMarketId;
+                const cardInfo = raw.card_details;
+                addResult(cardName, cardInfo, photoUri || '', result);
+              } catch (err) {
+                addResult('', null, photoUri || '', result);
+              }
+            }}
+            setCardName={() => { }}
+            setPhotoUri={setPhotoUri}
+          />
+        )}
       </View>
       <ScannedCards results={results} />
     </View>

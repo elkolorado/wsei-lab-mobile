@@ -5,8 +5,7 @@ import { View, Text, Image, StyleSheet, Button } from 'react-native';
 import { Linking } from 'react-native';
 import { colors } from '@/constants/themeColors';
 
-
-type CardMarketCard = {
+export type CardMarketCard = {
     id: number;
     expansion_id: number;
     cardMarketId: number;
@@ -27,6 +26,12 @@ type CardMarketCard = {
     avg_30d: number | null;
     avg_7d: number | null;
     avg_1d: number | null;
+    avg: number | null;
+    low_foil: number | null;
+    trend_foil: number | null;
+    avg1_foil: number | null;
+    avg7_foil: number | null;
+    avg30_foil: number | null;
     versions_url: string;
     printed_in: string;
     reprints: string;
@@ -42,102 +47,94 @@ interface FoundCardDetailsProps {
     photoUri?: string;
     result?: string;
     spinner: () => JSX.Element;
-
 }
 
 const FoundCardDetails: React.FC<FoundCardDetailsProps> = ({ cardName, cardInfo, photoUri, result, spinner }) => {
     const { addCard, removeCard } = useCardContext();
-    const [isCardAdded, setIsCardAdded] = useState(false); // Track if the card is added
-    const [addedCardId, setAddedCardId] = useState<string | null>(null); // Store the card ID after adding
+    const [isCardAdded, setIsCardAdded] = useState(false);
+    const [addedCardId, setAddedCardId] = useState<string | null>(null);
 
     const handleAddCard = async () => {
         if (result) {
             const newCard = {
-                id: Date.now().toString(), // Generate a unique ID for the card
+                id: Date.now().toString(),
                 name: cardName || 'Unknown Card',
-                image: 'https://www.dbs-cardgame.com/fw/images/cards/card/en/' + JSON.parse(result).best_match || '',
+                image: 'https://www.dbs-cardgame.com/fw/images/cards/card/en/' + (JSON.parse(result).best_match || ''),
                 quantity: 1,
                 set: 'Set 1',
             };
 
-            await addCard(newCard); // Add the card to the collection
-            setAddedCardId(newCard.name); // Set the card ID
-            setIsCardAdded(true); // Mark the card as added
+            await addCard(newCard);
+            setAddedCardId(newCard.name);
+            setIsCardAdded(true);
         }
     };
 
     const handleRemoveCard = async () => {
         if (addedCardId) {
-            // Logic to remove the card from the collection
-            console.log(`Removing card with ID: ${addedCardId}`);
-            await removeCard(addedCardId); // Call the remove card function
-            setIsCardAdded(false); // Reset the state
-            setAddedCardId(null); // Clear the card ID
+            await removeCard(addedCardId);
+            setIsCardAdded(false);
+            setAddedCardId(null);
         }
     };
 
     return (
-        <View style={{ flexDirection: 'row', padding: 20, backgroundColor: colors.foreground, borderRadius: 10, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 3 }}>
-            <View style={{ flex: 1, paddingRight: 10, backgroundColor: colors.foreground }}>
-                <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 5 }}>
-                    Name:{' '}
-                    <Text
-                        style={{ fontWeight: 'normal', textDecorationLine: 'underline', color: 'blue' }}
-                        onPress={() => Linking.openURL(cardInfo?.card_url || '')}
-                    >
-                        {cardInfo?.name.replace("[Fusion World]", "") || spinner()}
-                    </Text>
-                </Text>
-                <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 5 }}>
-                    Availability: <Text style={{ fontWeight: 'normal' }}>{cardInfo?.available || spinner()}</Text>
-                </Text>
-                <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 5 }}>
-                    Price: <Text style={{ fontWeight: 'normal' }}>{`${cardInfo?.from_price} €` || spinner()}</Text>
-                </Text>
-                <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 5 }}>
-                    Trend: <Text style={{ fontWeight: 'normal' }}>{`${cardInfo?.price_trend} €` || spinner()}</Text>
+        <View style={styles.container}>
+            {/* 1. Name Row: Flexible height, will push the rest down */}
+            <View style={styles.nameRow}>
+                <Text
+                    style={styles.nameText}
+                    onPress={() => {
+                        if (cardInfo?.card_url) Linking.openURL(cardInfo.card_url);
+                    }}
+                // Removed numberOfLines to allow it to be multi-line
+                >
+                    {cardInfo?.name?.replace?.("[Fusion World]", "") || spinner()}
                 </Text>
             </View>
-            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                {photoUri && (
-                    <Image source={{ uri: photoUri }} style={[styles.capturedImage, { marginRight: 10, borderRadius: 10 }]} />
-                )}
-                {result && (
-                    <Image
-                        source={{
-                            uri: `${API_ENDPOINT}/card-image/${cardInfo?.tcg_id}/${JSON.parse(result).best_match}`,
-                        }}
-                        style={[styles.capturedImage, { borderRadius: 10 }]}
-                    />
-                )}
-            </View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
-                <View style={{ flexDirection: 'row' }}>
-                    <View style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                        {/* <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                            <Button
-                                title="✏️ Correction"
-                                onPress={() => {
-                                    console.log('Edit button pressed');
-                                }}>
-                            </Button>
 
-                        </View> */}
-                        <View style={{ flexDirection: 'column', alignItems: 'center' }}>
-                            <Button
-                                title="💾 Save"
-                                onPress={handleAddCard}
-                            />
-                            {isCardAdded && (
-                                <Button
-                                    title="↩️ Undo"
-                                    onPress={handleRemoveCard}
-                                    color="red"
-                                />
-                            )
-                            }
+            {/* 2. Content Row: This expands to fill the remaining 175px */}
+            <View style={styles.contentRow}>
 
-                        </View>
+                {/* 3. Photos Column: Flex 1 so it shrinks/grows to fit space */}
+                <View style={styles.photosColumn}>
+                    {result && (
+                        <Image
+                            source={{
+                                uri: `${API_ENDPOINT}/card-image/${cardInfo?.tcg_id}/${JSON.parse(result).best_match}`,
+                            }}
+                            style={[styles.cardImageResult, styles.cardImage]}
+                        />
+                    )}
+                    {photoUri && (
+                        <Image source={{ uri: photoUri }} style={[styles.cardImageTaken, styles.cardImage]} />
+                    )}
+
+                </View>
+
+                {/* 4. Prices Column: Fixed width / wrap-content to ensure visibility */}
+                <View style={styles.pricesColumn}>
+                    <View style={styles.priceContainer}>
+                        <Text style={styles.priceLabel}>Price</Text>
+                        <Text style={styles.priceValue}>
+                            {cardInfo?.price != null ? `${cardInfo.price}€` : 'N/A'} / {cardInfo?.price_foil != null ? `${cardInfo.price_foil}€` : 'N/A'}
+                        </Text>
+                    </View>
+
+                    <View style={styles.priceContainer}>
+                        <Text style={styles.priceLabel}>Trend</Text>
+                        <Text style={styles.priceValue}>
+                            {cardInfo?.price_trend != null ? `${cardInfo.price_trend}€` : 'N/A'}
+                        </Text>
+                    </View>
+
+                    <View style={styles.actionWrapper}>
+                        <Button title="💾 Save" onPress={handleAddCard} />
+                        {isCardAdded && (
+                            <View style={styles.undoButton}>
+                                <Button title="↩️" onPress={handleRemoveCard} color="red" />
+                            </View>
+                        )}
                     </View>
                 </View>
             </View>
@@ -146,11 +143,73 @@ const FoundCardDetails: React.FC<FoundCardDetailsProps> = ({ cardName, cardInfo,
 };
 
 const styles = StyleSheet.create({
-    capturedImage: {
-        width: 100,
-        height: 100,
+    container: {
+        height: 175, // Lock the height
+        borderColor: "#d4af374d",
+        borderRadius: 16,
+        borderWidth: 2,
+        padding: 10,
+        backgroundColor: "#af85960d",
+        overflow: 'hidden',
+    },
+    nameRow: {
+        width: '100%',
+        marginBottom: 8,
+        flexShrink: 0, // Ensure name doesn't get cut off by images
+    },
+    nameText: {
+        fontSize: 15,
+        fontWeight: 'bold',
+        textDecorationLine: 'underline',
+        color: colors.mutedForeground,
+    },
+    contentRow: {
+        flex: 1, // Takes all space left after NameRow
+        flexDirection: 'row',
+        alignItems: 'stretch', // Stretch children vertically
+        gap: 10,
+    },
+    photosColumn: {
+        flex: 1, // Shrink or grow images to fill what's left
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    cardImageResult: {
+        borderColor: colors.gold,
+        borderWidth: 2,
+    },
+    cardImage: {
+        height: '100%',
+        aspectRatio: 0.71,
         resizeMode: 'contain',
-        margin: 10,
+        borderRadius: 6,
+    },
+    pricesColumn: {
+        width: 100, // Fixed width ensures prices are always visible and aligned
+        justifyContent: 'center',
+        flexShrink: 0, // Prevents price column from disappearing
+    },
+    priceContainer: {
+        marginBottom: 4,
+    },
+    priceLabel: {
+        fontSize: 10,
+        color: colors.mutedForeground,
+        textTransform: 'uppercase',
+    },
+    priceValue: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#fff',
+    },
+    actionWrapper: {
+        marginTop: 4,
+        flexDirection: 'row',
+        gap: 4,
+    },
+    undoButton: {
+        flex: 0.4,
     },
 });
 

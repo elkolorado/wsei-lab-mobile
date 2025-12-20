@@ -15,15 +15,17 @@ const CardsView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [rarities, setRarities] = useState<string[]>(['All']);
   const [rarityFilter, setRarityFilter] = useState<string>('All');
-  const [sortBy, setSortBy] = useState<'price' | 'availability' | 'name'>('price');
+  const [sortBy, setSortBy] = useState<'price' | 'availability' | 'name' | 'priceTrend'>('price');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+
+  const tcg_name = 'dragon ball fusion world';
 
   // Try to load expansions on mount
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const exps = await fetchExpansions('one piece');
+        const exps = await fetchExpansions(tcg_name);
         if (!mounted) return;
         if (Array.isArray(exps)) {
           setExpansions(exps.map((e: any) => e.name || e.title || String(e)));
@@ -48,7 +50,7 @@ const CardsView: React.FC = () => {
       setLoading(true);
       try {
         // prefer cards with prices endpoint if available
-        const result = await fetchCardsWithPrices('one piece');
+        const result = await fetchCardsWithPrices(tcg_name);
         if (!mounted) return;
         const cardsArray = Array.isArray(result) ? result : (result && result.cards) ? result.cards : [];
         setCards(cardsArray);
@@ -65,7 +67,7 @@ const CardsView: React.FC = () => {
       } catch (err) {
         console.warn('fetchCardsWithPrices failed, trying fetchCards', err);
         try {
-          const result = await fetchCards('one piece');
+          const result = await fetchCards(tcg_name);
           if (!mounted) return;
           const cardsArray = Array.isArray(result) ? result : [];
           setCards(cardsArray);
@@ -161,7 +163,10 @@ const CardsView: React.FC = () => {
     const dir = sortDir === 'asc' ? 1 : -1;
     if (sortBy === 'price') {
       out.sort((a, b) => dir * (Number(a.from_price ?? a.price ?? a.avg_price ?? 0) - Number(b.from_price ?? b.price ?? b.avg_price ?? 0)));
-    } else if (sortBy === 'availability') {
+    } else if (sortBy === 'priceTrend') {
+      out.sort((a, b) => dir * (Number(a.price_trend ?? 0) - Number(b.price_trend ?? 0)));
+    }
+    else if (sortBy === 'availability') {
       out.sort((a, b) => dir * (Number(a.available ?? a.available_foil ?? a.stock ?? 0) - Number(b.available ?? b.available_foil ?? b.stock ?? 0)));
     } else {
       out.sort((a, b) => dir * String(a.name || '').localeCompare(String(b.name || '')));
@@ -230,9 +235,21 @@ const CardsView: React.FC = () => {
                 }}
                 style={[styles.sortButton, sortBy === 'price' && styles.sortActive]}
               >
-                <Text style={sortBy === 'price' ? styles.sortTextActive : styles.sortText}>Price {sortBy === 'price' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</Text>
+                <Text style={sortBy === 'price' ? styles.sortTextActive : styles.sortText}>From Price {sortBy === 'price' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</Text>
               </TouchableOpacity>
 
+              <TouchableOpacity
+                onPress={() => {
+                  if (sortBy === 'priceTrend') setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+                  else {
+                    setSortBy('priceTrend');
+                    setSortDir('desc');
+                  }
+                }}
+                style={[styles.sortButton, sortBy === 'priceTrend' && styles.sortActive]}
+              >
+                <Text style={sortBy === 'priceTrend' ? styles.sortTextActive : styles.sortText}>Price Trend {sortBy === 'priceTrend' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</Text>
+              </TouchableOpacity>
               {/* <TouchableOpacity
                 onPress={() => {
                   if (sortBy === 'availability') setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));

@@ -8,6 +8,7 @@ type Props = {
     results: any[];
 }
 
+const styles = style();
 
 
 const ScannedCards: React.FC<Props> = ({ results }) => {
@@ -15,7 +16,9 @@ const ScannedCards: React.FC<Props> = ({ results }) => {
         return <Text style={styles.message}>Loading...</Text>;
     }
     return (
-        <View style={{ flex: 1, width: '100%', paddingTop: 16 }}>
+        <View style={{ width: '100%', paddingTop: 16, flexBasis: "auto",
+          flexDirection: "column",
+          flexShrink: 0, }}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Text style={{ fontSize: 16, color: colors.primary }}>Scanned Cards</Text>
                 <Badge
@@ -34,7 +37,7 @@ const ScannedCards: React.FC<Props> = ({ results }) => {
                     <Text style={styles.noResultsSubMessage}>Scan cards to see them listed here</Text>
                 </View>
             ) : (
-                <ScrollView contentContainerStyle={{ paddingTop: 8 }}>
+                <ScrollView contentContainerStyle={{ gap: 16 }}>
                     {results.map((item, index) => (
                         <FoundCardDetails
                             key={index}
@@ -55,6 +58,5 @@ const ScannedCards: React.FC<Props> = ({ results }) => {
     );
 }
 
-const styles = style();
 
 export default ScannedCards;
