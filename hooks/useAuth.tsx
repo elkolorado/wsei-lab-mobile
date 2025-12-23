@@ -1,6 +1,6 @@
 import React, { useContext, createContext} from 'react';
 import { useStorageState } from './useStorageState';
-import { API_ENDPOINT } from '@/constants/apiConfig';
+import { CARDS_API_ENDPOINT } from '@/constants/apiConfig';
 
 const AuthContext = createContext<{
   login: (username: string, password: string) => Promise<boolean | void>;
@@ -27,7 +27,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const login = async (username: string, password: string) => {
     try {
       setIsLoading(true);
-      const response = await fetch(`${API_ENDPOINT}/auth/login`, {
+      const response = await fetch(`${CARDS_API_ENDPOINT}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

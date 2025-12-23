@@ -5,6 +5,8 @@ import { Linking } from 'react-native';
 import { fetchExpansions, fetchCardsWithPrices, fetchCards, fetchTCGs } from '@/actions/cardsApi';
 import { colors } from '@/constants/themeColors';
 import { Picker } from '@react-native-picker/picker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FontAwesome6 } from '@expo/vector-icons';
 
 const CardsView: React.FC = () => {
   const [expansions, setExpansions] = useState<string[]>([]);
@@ -20,8 +22,8 @@ const CardsView: React.FC = () => {
   const [sortBy, setSortBy] = useState<'price' | 'availability' | 'name' | 'priceTrend'>('price');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
-  const tcg_name = selectedTCG || 'riftbound';
-
+  const tcg_name = selectedTCG || 'dragon ball fusion world';
+  const insets = useSafeAreaInsets();
   // 1. Keep TCG fetch on mount only
   useEffect(() => {
     let mounted = true;
@@ -163,7 +165,15 @@ const CardsView: React.FC = () => {
     if (sortBy === 'price') {
       out.sort((a, b) => dir * (Number(a.from_price ?? a.price ?? a.avg_price ?? 0) - Number(b.from_price ?? b.price ?? b.avg_price ?? 0)));
     } else if (sortBy === 'priceTrend') {
-      out.sort((a, b) => dir * (Number(a.price_trend ?? 0) - Number(b.price_trend ?? 0)));
+      // out.sort((a, b) => dir * (Number(a.price_trend ?? 0) - Number(b.price_trend ?? 0)));
+      out.sort((a, b) => {
+        const extractTrend = (card: any) => {
+          const trend = card?.price_trend ? card.price_trend : (!card?.avg && !card?.avg_1d) ? card.trend_foil : null;
+          const n = Number(trend ?? 0);
+          return Number.isFinite(n) ? n : 0;
+        };
+        return dir * (extractTrend(a) - extractTrend(b));
+      });
     }
     else if (sortBy === 'availability') {
       out.sort((a, b) => dir * (Number(a.available ?? a.available_foil ?? a.stock ?? 0) - Number(b.available ?? b.available_foil ?? b.stock ?? 0)));
@@ -179,69 +189,55 @@ const CardsView: React.FC = () => {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[
+      styles.container, { paddingBottom: insets.bottom }// Apply row layout on web/large screens
+    ]}>
       <View style={{ maxWidth: 1536, marginInline: 'auto', flex: 1, width: '100%' }}>
-        <Text style={styles.header}>Cards Gallery</Text>
 
         {/* Filters bar */}
         <View style={styles.filters}>
           <TextInput
-            style={styles.search}
+            // style={styles.search}
+            style={{ outline: 'none', color: colors.foreground, borderColor: colors.border, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, height: 48, backgroundColor: 'rgba(255,255,255,0.05)' }}
             placeholder="Search cards by name"
             value={searchQuery}
             onChangeText={setSearchQuery}
+            selectionColor={colors.primary}
+            placeholderTextColor={colors.colorForeground}
           />
+{/* 
+          <View style={styles.dropdownRow}>
+            <View style={styles.dropdownContainer}>
+              <Picker
+                selectedValue={selectedTCG || 'All'}
+                onValueChange={(v) => setSelectedTCG(v === 'All' ? null : v)}
+                dropdownIconColor={colors.primary}
+                style={{ fontSize: 12 }}
+                mode="dropdown"
+              >
+                <Picker.Item label="All TCGs" value="All" color={colors.mutedForeground} />
+                {tcgs.map((tcg) => (
+                  <Picker.Item key={tcg} label={tcg.toUpperCase()} value={tcg} color={Platform.OS === 'ios' ? "#fff" : "#000"} />
+                ))}
+              </Picker>
+            </View>
 
-          <View style={styles.dropdownContainer}>
-            <Picker
-              selectedValue={selectedExpansion || 'All'}
-              onValueChange={(itemValue) =>
-                setSelectedExpansion(itemValue === 'All' ? null : itemValue)
-              }
-              // style={styles.picker}
-              dropdownIconColor={colors.primary} // Matches your gold theme
-              mode="dropdown" // Android specific
-            >
-              <Picker.Item label="All Expansions" value="All" color={Platform.OS === 'ios' ? colors.primary : undefined} />
-              {expansions.map((exp) => (
-                <Picker.Item
-                  key={exp}
-                  label={exp}
-                  value={exp}
-                  color={Platform.OS === 'ios' ? '#fff' : undefined}
-                />
-              ))}
-            </Picker>
-
-            <Picker
-              selectedValue={selectedTCG || 'All'}
-              onValueChange={(itemValue) =>
-                setSelectedTCG(itemValue === 'All' ? null : itemValue)
-              }
-              // style={styles.picker}
-              dropdownIconColor={colors.primary} // Matches your gold theme
-              mode="dropdown" // Android specific
-            >
-              <Picker.Item label="All TCGs" value="All" color={Platform.OS === 'ios' ? colors.primary : undefined} />
-              {tcgs.map((tcg) => (
-                <Picker.Item
-                  key={tcg}
-                  label={tcg}
-                  value={tcg}
-                  color={Platform.OS === 'ios' ? '#fff' : undefined}
-                />
-              ))}
-            </Picker>
-          </View>
+            <View style={styles.dropdownContainer}>
+              <Picker
+                selectedValue={selectedExpansion || 'All'}
+                onValueChange={(v) => setSelectedExpansion(v === 'All' ? null : v)}
+                dropdownIconColor={colors.primary}
+                mode="dropdown"
+              >
+                <Picker.Item label="Expansions" value="All" color={colors.primary} />
+                {expansions.map((exp) => (
+                  <Picker.Item key={exp} label={exp} value={exp} color={Platform.OS === 'ios' ? "#fff" : "#000"} />
+                ))}
+              </Picker>
+            </View>
+          </View> */}
 
           <View style={styles.rowControls}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
-              {/* {rarities.map((r: string) => (
-              <TouchableOpacity key={r} onPress={() => setRarityFilter(r)} style={[styles.rarityButton, rarityFilter === r && styles.rarityActive]}>
-                <Text style={rarityFilter === r ? styles.rarityTextActive : styles.rarityText}>{r}</Text>
-              </TouchableOpacity>
-            ))} */}
-            </ScrollView>
 
             <View style={styles.sortButtons}>
               <TouchableOpacity
@@ -254,7 +250,7 @@ const CardsView: React.FC = () => {
                 }}
                 style={[styles.sortButton, sortBy === 'price' && styles.sortActive]}
               >
-                <Text style={sortBy === 'price' ? styles.sortTextActive : styles.sortText}>From Price {sortBy === 'price' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</Text>
+                <Text style={sortBy === 'price' ? styles.sortTextActive : styles.sortText}>From Price {sortBy === 'price' ? (sortDir === 'asc' ? <FontAwesome6 name="arrow-up" /> : <FontAwesome6 name="arrow-down" />) : ''}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -267,7 +263,7 @@ const CardsView: React.FC = () => {
                 }}
                 style={[styles.sortButton, sortBy === 'priceTrend' && styles.sortActive]}
               >
-                <Text style={sortBy === 'priceTrend' ? styles.sortTextActive : styles.sortText}>Price Trend {sortBy === 'priceTrend' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</Text>
+                <Text style={sortBy === 'priceTrend' ? styles.sortTextActive : styles.sortText}>Price Trend {sortBy === 'priceTrend' ? (sortDir === 'asc' ? <FontAwesome6 name="arrow-up" /> : <FontAwesome6 name="arrow-down" />) : ''}</Text>
               </TouchableOpacity>
               {/* <TouchableOpacity
                 onPress={() => {
@@ -292,7 +288,7 @@ const CardsView: React.FC = () => {
                 }}
                 style={[styles.sortButton, sortBy === 'name' && styles.sortActive]}
               >
-                <Text style={sortBy === 'name' ? styles.sortTextActive : styles.sortText}>Name {sortBy === 'name' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</Text>
+                <Text style={sortBy === 'name' ? styles.sortTextActive : styles.sortText}>Name {sortBy === 'name' ? (sortDir === 'asc' ? <FontAwesome6 name="arrow-up" /> : <FontAwesome6 name="arrow-down" />) : ''}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -325,49 +321,90 @@ const CardsView: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  header: { fontSize: 20, fontWeight: '700', padding: 12, color: colors.foreground },
-  filters: { paddingHorizontal: 12 },
-  search: { height: 40, borderColor: '#ddd', borderWidth: 1, borderRadius: 6, paddingHorizontal: 8, marginBottom: 8, color: colors.foreground, backgroundColor: colors.inputBackground },
-  expansionsRow: { marginBottom: 8 },
-  expansionButton: { paddingVertical: 6, paddingHorizontal: 10, marginRight: 8, borderRadius: 20, borderWidth: 1, borderColor: '#ddd', color: colors.foreground },
-  expansionActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  expansionText: { color: colors.foreground },
-  expansionTextActive: { color: '#000', fontWeight: '700' },
-  rowControls: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  rarityButton: { paddingVertical: 6, paddingHorizontal: 10, marginRight: 8, borderRadius: 16, borderWidth: 1, borderColor: '#ddd' },
-  rarityActive: { backgroundColor: '#f0f0f0' },
-  rarityText: { color: colors.foreground },
-  rarityTextActive: { color: '#000', fontWeight: '700' },
-  sortButtons: { flexDirection: 'row', marginLeft: 8 },
-  sortButton: { paddingVertical: 6, paddingHorizontal: 10, marginRight: 6, borderRadius: 6, borderWidth: 1, borderColor: '#ddd' },
-  sortActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  sortText: { color: colors.foreground },
-  sortTextActive: { color: '#000', fontWeight: '700' },
-  dropdownContainer: {
-    flex: 1,
+  header: {
+    fontSize: 24,
+    fontWeight: '800',
+    padding: 16,
+    color: colors.foreground,
+    letterSpacing: 0.5
+  },
+  filters: {
+    paddingHorizontal: 16,
+    gap: 12 // Using gap instead of margins for cleaner spacing
+  },
+  // --- SEARCH BAR ---
+  searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: 12,
+  },
+  search: {
+    flex: 1,
+    height: '100%',
+    color: colors.foreground,
+    fontSize: 16,
+    ...Platform.select({
+      web: { outlineStyle: 'none' }
+    })
+  },
+  // --- PICKER ROW ---
+  dropdownRow: {
+    flexDirection: 'row',
+    gap: 10,
+    width: '100%',
+    marginTop: 4,
+  },
+  dropdownContainer: {
+    flex: 1,
+    height: 48, // Stała wysokość taka sama jak TextInput
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    justifyContent: 'center', // Centruje Picker w pionie
+    overflow: 'hidden',
+  },
+  picker: {
+    width: '100%',
+    color: colors.foreground,
+    backgroundColor: 'transparent',
+    ...Platform.select({
+      android: {
+        height: 48,
+        scaleX: 0.9, // Opcjonalne: lekkie zmniejszenie skali, by tekst nie dotykał krawędzi
+        scaleY: 0.9,
+      },
+      web: {
+        outlineStyle: 'none',
+        cursor: 'pointer',
+      }
+    }),
+  },
+  // --- SORT BAR ---
+  sortButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8
+  },
+  sortButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
-    marginVertical: 10,
-    overflow: 'hidden', // Ensures the picker doesn't bleed out of borders
+    backgroundColor: 'rgba(255,255,255,0.03)'
   },
-  picker: {
-    height: 50,
-    color: '#fff', // Text color for the selected item
-    width: '100%',
-    backgroundColor: 'transparent',
-    borderColor: 'transparent',
-    ...Platform.select({
-      // web: {
-      //   outlineStyle: 'none',
-      //   backgroundColor: 'transparent',
-      //   cursor: 'pointer',
-      // },
-    }),
+  sortActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary
   },
+  sortText: { color: colors.foreground, fontSize: 13, fontWeight: '600' },
+  sortTextActive: { color: '#000', fontWeight: '700' },
 });
 
 export default CardsView;

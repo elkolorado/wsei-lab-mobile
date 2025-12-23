@@ -4,6 +4,8 @@ import React, { useState, JSX } from 'react';
 import { View, Text, Image, StyleSheet, Button } from 'react-native';
 import { Linking } from 'react-native';
 import { colors } from '@/constants/themeColors';
+import { FontAwesome6 } from '@expo/vector-icons';
+import PrimaryButton from './primaryButton';
 
 export type CardMarketCard = {
     id: number;
@@ -46,37 +48,31 @@ interface FoundCardDetailsProps {
     cardInfo?: CardMarketCard;
     photoUri?: string;
     result?: string;
-    spinner: () => JSX.Element;
 }
 
-const FoundCardDetails: React.FC<FoundCardDetailsProps> = ({ cardName, cardInfo, photoUri, result, spinner }) => {
+const FoundCardDetails: React.FC<FoundCardDetailsProps> = ({ cardName, cardInfo, photoUri, result }) => {
     const { addCard, removeCard } = useCardContext();
     const [isCardAdded, setIsCardAdded] = useState(false);
-    const [addedCardId, setAddedCardId] = useState<string | null>(null);
+    const [addedCardMarketId, setAddedCardMarketId] = useState<number | null>(null);
 
     const handleAddCard = async () => {
-        if (result) {
-            const newCard = {
-                id: Date.now().toString(),
-                name: cardName || 'Unknown Card',
-                image: 'https://www.dbs-cardgame.com/fw/images/cards/card/en/' + (JSON.parse(result).best_match || ''),
-                quantity: 1,
-                set: 'Set 1',
-            };
-
-            await addCard(newCard);
-            setAddedCardId(newCard.name);
-            setIsCardAdded(true);
-        }
+        if (!cardInfo) return;
+        const ucId = await addCard(cardInfo, 1, 0);
+        setAddedCardMarketId(cardInfo.cardMarketId);
+        setIsCardAdded(true);
     };
 
     const handleRemoveCard = async () => {
-        if (addedCardId) {
-            await removeCard(addedCardId);
+        if (addedCardMarketId != null) {
+            await removeCard(addedCardMarketId, 1, 0);
             setIsCardAdded(false);
-            setAddedCardId(null);
+            setAddedCardMarketId(null);
         }
     };
+
+
+    const price = cardInfo?.from_price
+    const priceTrend = cardInfo?.price_trend ? cardInfo.price_trend : (!cardInfo?.avg && !cardInfo?.avg_1d) ? cardInfo?.trend_foil : null;
 
     return (
         <View style={styles.container}>
@@ -89,7 +85,7 @@ const FoundCardDetails: React.FC<FoundCardDetailsProps> = ({ cardName, cardInfo,
                     }}
                 // Removed numberOfLines to allow it to be multi-line
                 >
-                    {cardInfo?.name?.replace?.("[Fusion World]", "") || spinner()}
+                    {cardInfo?.name?.replace?.("[Fusion World]", "") || ''}
                 </Text>
             </View>
 
@@ -115,25 +111,25 @@ const FoundCardDetails: React.FC<FoundCardDetailsProps> = ({ cardName, cardInfo,
                 {/* 4. Prices Column: Fixed width / wrap-content to ensure visibility */}
                 <View style={styles.pricesColumn}>
                     <View style={styles.priceContainer}>
-                        <Text style={styles.priceLabel}>Price</Text>
-                        <Text style={styles.priceValue}>
-                            {cardInfo?.price != null ? `${cardInfo.price}€` : 'N/A'} / {cardInfo?.price_foil != null ? `${cardInfo.price_foil}€` : 'N/A'}
-                        </Text>
+                        <Text style={styles.priceLabel}>From Price</Text>
+                        <Text style={styles.priceValue}>{typeof price === 'number' ? `${price}€` : (price ? String(price) : '-')}</Text>
                     </View>
 
                     <View style={styles.priceContainer}>
-                        <Text style={styles.priceLabel}>Trend</Text>
-                        <Text style={styles.priceValue}>
-                            {cardInfo?.price_trend != null ? `${cardInfo.price_trend}€` : 'N/A'}
-                        </Text>
+                        <Text style={styles.priceLabel}><FontAwesome6 name="arrow-trend-up" size={14} /> Trend</Text>
+
+                        <Text style={styles.priceValue}>{priceTrend ? `${Number(priceTrend)}€` : ''}</Text>
+
                     </View>
 
                     <View style={styles.actionWrapper}>
-                        <Button title="💾 Save" onPress={handleAddCard} />
+                        {/* <Button title="💾 Save" onPress={handleAddCard} /> */}
+                        {/* we need fontawesome btn inside btn, but we cant use btn so use other thing */}
+
+                        {!isCardAdded && (<PrimaryButton title="Save" onPress={handleAddCard} disabled={isCardAdded} icon={<FontAwesome6 name="save" size={14} />} />)}
+
                         {isCardAdded && (
-                            <View style={styles.undoButton}>
-                                <Button title="↩️" onPress={handleRemoveCard} color="red" />
-                            </View>
+                            <PrimaryButton title="Undo" onPress={handleRemoveCard} icon={<FontAwesome6 name="arrow-rotate-left" size={14} />} />
                         )}
                     </View>
                 </View>
@@ -201,7 +197,7 @@ const styles = StyleSheet.create({
     priceValue: {
         fontSize: 12,
         fontWeight: '700',
-        color: '#fff',
+        color: colors.foreground
     },
     actionWrapper: {
         marginTop: 4,

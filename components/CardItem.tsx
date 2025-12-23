@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
+import { useCardContext } from '@/context/CardContext';
+
 interface Props {
   card: CardMarketCard;
   onPress?: (card: any) => void;
+  showCollection?: boolean;
 }
 
 import { API_ENDPOINT } from '@/constants/apiConfig';
 import { colors } from '@/constants/themeColors';
 import { CardMarketCard } from './foundCardDetails';
 
-const CardItem: React.FC<Props> = ({ card, onPress }) => {
+const CardItem: React.FC<Props> = ({ card, onPress, showCollection = false }) => {
   const [aspectRatio, setAspectRatio] = useState<number | null>(null);
   // prefer image_url from API; fallback to constructed card-image endpoint
   const imageUrl = `${API_ENDPOINT}/card-image/${card.tcg_id}/${card.cardMarketId}.png`;
@@ -19,10 +22,10 @@ const CardItem: React.FC<Props> = ({ card, onPress }) => {
   // const price = (card.fromPrice ?? card.fromPrice ?? card.price ?? card.avg_price ?? card.avgPrice);
   const price = card.from_price
   const priceTrend = card.price_trend ? card.price_trend : (!card.avg && !card.avg_1d) ? card.trend_foil : null;
-  console.log(card);  
+  console.log(card);
   useEffect(() => {
     let mounted = true;
-  const uri = imageUrl; // imageUrl already points to a full URL in many cases
+    const uri = imageUrl; // imageUrl already points to a full URL in many cases
     // Try to get remote image dimensions so we can preserve aspect ratio
     Image.getSize(
       uri,
@@ -40,6 +43,33 @@ const CardItem: React.FC<Props> = ({ card, onPress }) => {
       mounted = false;
     };
   }, [imageUrl]);
+  // collection integration (only used when `showCollection` is true)
+  const { cardCollectionData, addCard, removeCard } = useCardContext();
+  const [collectionQty, setCollectionQty] = useState<number>(0);
+
+  useEffect(() => {
+    if (!showCollection) return;
+    const entry = cardCollectionData?.find((c) => c.cardMarketId === card.cardMarketId || c.card_id === card.card_id);
+    setCollectionQty(entry?.quantity ?? 0);
+  }, [showCollection, cardCollectionData, card.cardMarketId, card.card_id]);
+
+  const handleAdd = async () => {
+    try {
+      await addCard(card, 1, 0);
+    } catch (e) {
+      console.error('addCard failed', e);
+    }
+  };
+
+  const handleRemove = async () => {
+    try {
+      const id = card.cardMarketId || card.card_id || 0;
+      if (!id) return;
+      await removeCard(id, 1, 0);
+    } catch (e) {
+      console.error('removeCard failed', e);
+    }
+  };
   return (
     <TouchableOpacity style={styles.card} onPress={() => onPress && onPress(card)}>
       {imageUrl ? (
@@ -52,10 +82,21 @@ const CardItem: React.FC<Props> = ({ card, onPress }) => {
       <View style={styles.meta}>
         <Text numberOfLines={1} style={styles.name}>{name}</Text>
         <View style={styles.row}>
-          <Text style={styles.price}><FontAwesome6 name="arrow-up-short-wide" size={14}/> {typeof price === 'number' ? `${price}€` : (price ? String(price) : '-')}</Text>
-          <Text style={styles.price}><FontAwesome6 name="arrow-trend-up" size={14}/> {priceTrend ? `${Number(priceTrend)}€` : ''}</Text>
+          <Text style={styles.price}>{typeof price === 'number' ? `${price}€` : (price ? String(price) : '-')}</Text>
+          <Text style={styles.price}><FontAwesome6 name="arrow-trend-up" size={14} /> {priceTrend ? `${Number(priceTrend)}€` : ''}</Text>
           {/* <Text style={styles.rarity}>{rarity}</Text> */}
         </View>
+        {showCollection && (
+          <View style={styles.collectionRow}>
+            <TouchableOpacity onPress={handleRemove} style={styles.qtyBtn} disabled={collectionQty <= 0}>
+              <Text style={styles.qtyBtnText}>-</Text>
+            </TouchableOpacity>
+            <Text style={styles.qtyText}>{collectionQty}</Text>
+            <TouchableOpacity onPress={handleAdd} style={styles.qtyBtn}>
+              <Text style={styles.qtyBtnText}>+</Text>
+            </TouchableOpacity>
+          </View>
+        )}
         {/* <Text style={styles.availability}>Avail: {String(availability)}{availability_foil ? ` / ${String(availability_foil)}` : ''}</Text> */}
       </View>
     </TouchableOpacity>
@@ -101,6 +142,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  collectionRow: {
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  qtyBtn: {
+    width: 34,
+    height: 28,
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 8,
+    backgroundColor: "rgba(255,255,255,0.03)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    justifyContent: 'center',
+  },
+  qtyBtnText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 18,
+  },
+  qtyText: {
+    minWidth: 28,
+    textAlign: 'center',
+    color: colors.foreground,
+    fontWeight: '700',
   },
   price: {
     color: colors.primary,

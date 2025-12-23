@@ -1,21 +1,25 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useSession } from '@/hooks/useAuth';
-import { API_ENDPOINT } from '@/constants/apiConfig';
+import { CARDS_API_ENDPOINT } from '@/constants/apiConfig';
+import { CardMarketCard } from '@/components/foundCardDetails';
 
-interface Card {
-    id: string;
-    name: string;
-    image: string;
+// Combined type: CardMarketCard fields plus minimal user-collection fields returned by backend
+export type CollectionItem = CardMarketCard & {
+    // user collection fields (from uc.*)
+    user_collection_id?: number; // uc.id as returned by backend
+    user_id?: number;
+    card_id?: number; // underlying Card.id
     quantity: number;
-    set: string;
-}
+    quantity_foil?: number;
+    last_updated?: string;
+};
 
 interface CardContextProps {
-    cardData: Card[];
-    addCard: (newCard: Card) => Promise<void>;
-    updateCardQuantity: (id: string, quantity: number) => Promise<void>;
-    fetchCollection: () => Promise<void>;
-    removeCard: (id: string) => Promise<void>;
+    cardCollectionData: CollectionItem[];
+    addCard: (newCard: CardMarketCard, quantity?: number, quantity_foil?: number) => Promise<number | null>;
+    updateCardQuantity: (cardMarketId: number, quantity: number) => Promise<void>;
+    fetchCollection: (tcg_id?: number) => Promise<void>;
+    removeCard: (cardMarketId: number, quantity?: number, quantity_foil?: number) => Promise<void>;
 }
 
 const CardContext = createContext<CardContextProps | undefined>(undefined);
@@ -23,13 +27,15 @@ const CardContext = createContext<CardContextProps | undefined>(undefined);
 export default CardContext;
 
 export const CardProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [cardData, setCardData] = useState<Card[]>([]);
+    const [cardData, setCardData] = useState<CollectionItem[]>([]);
     const { session } = useSession();
 
     // Fetch the collection from the backend
-    const fetchCollection = async () => {
+    const fetchCollection = async (tcg_id?: number) => {
         try {
-            const response = await fetch(`${API_ENDPOINT}/collection`, {
+            const url = new URL(`${CARDS_API_ENDPOINT}/collection/`);
+            if (tcg_id) url.searchParams.set('tcg_id', String(tcg_id));
+            const response = await fetch(url.toString(), {
                 headers: {
                     Authorization: `Bearer ${session}`,
                 },
@@ -38,71 +44,105 @@ export const CardProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 throw new Error('Failed to fetch collection');
             }
             const data = await response.json();
-            setCardData(data);
+            // Assume backend returns array of rows matching the SQL described by the user
+            setCardData(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error('Error fetching collection:', error);
         }
     };
 
     // Add a card to the backend collection
-    const addCard = async (newCard: Card) => {
-        console.log(newCard)
+    const addCard = async (newCard: CardMarketCard, quantity = 1, quantity_foil = 0) => {
         try {
-            const response = await fetch(`${API_ENDPOINT}/collection/add`, {
+            // Prefer sending `card_market_id` from the CardMarketCard we get in the app
+            const body: any = { quantity, quantity_foil };
+            if (typeof newCard.cardMarketId === 'number') {
+                body.card_market_id = newCard.cardMarketId;
+            } else if (typeof newCard.card_id === 'number') {
+                body.card_id = newCard.card_id;
+            } else {
+                // As a last resort try id field
+                const parsed = Number((newCard as any).id);
+                if (!Number.isNaN(parsed) && Number.isFinite(parsed)) body.card_id = parsed;
+            }
+
+            const response = await fetch(`${CARDS_API_ENDPOINT}/collection/addCard`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${session}`,
                 },
-                body: JSON.stringify(newCard),
+                body: JSON.stringify(body),
             });
             if (!response.ok) {
                 throw new Error('Failed to add card');
             }
-            fetchCollection();
+            const json = await response.json();
+            // backend returns { success: True, user_collection_id: uc_id }
+            const ucId = json?.user_collection_id ?? null;
+            await fetchCollection();
+            return ucId;
         } catch (error) {
             console.error('Error adding card:', error);
+            return null;
         }
     };
 
-    // Update card quantity in the backend
-    const updateCardQuantity = async (id: string, quantity: number) => {
+    // Update card quantity in the backend using cardMarketId to identify the card
+    const updateCardQuantity = async (cardMarketId: number, quantity: number) => {
         try {
-            const response = await fetch(`${API_ENDPOINT}/collection/update`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${session}`,
-                },
-                body: JSON.stringify({ id, quantity }),
-            });
-            if (!response.ok) {
-                throw new Error('Failed to update card quantity');
+            const existing = cardData.find((c) => c.cardMarketId === cardMarketId);
+            const existingQty = existing ? existing.quantity : 0;
+            const delta = quantity - existingQty;
+            if (delta === 0) return;
+
+            if (delta > 0) {
+                const body: any = { quantity: delta, quantity_foil: 0, card_market_id: cardMarketId };
+                const response = await fetch(`${CARDS_API_ENDPOINT}/collection/addCard`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${session}`,
+                    },
+                    body: JSON.stringify(body),
+                });
+                if (!response.ok) throw new Error('Failed to add card quantity');
+                await fetchCollection();
+            } else {
+                const body: any = { quantity: Math.abs(delta), quantity_foil: 0, card_market_id: cardMarketId };
+                const response = await fetch(`${CARDS_API_ENDPOINT}/collection/removeCard`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${session}`,
+                    },
+                    body: JSON.stringify(body),
+                });
+                if (!response.ok) throw new Error('Failed to remove card quantity');
+                await fetchCollection();
             }
-            // Update local state after successful update
-            setCardData((prevData) =>
-                prevData.map((card) => (card.id === id ? { ...card, quantity } : card))
-            );
         } catch (error) {
             console.error('Error updating card quantity:', error);
         }
     };
 
-    // Remove a card from the backend collection
-    const removeCard = async (id: string) => {
+    // Remove a card from the backend collection by cardMarketId
+    const removeCard = async (cardMarketId: number, quantity = 1, quantity_foil = 0) => {
         try {
-            const response = await fetch(`${API_ENDPOINT}/collection/removeCard`, {
+            const body: any = { quantity, quantity_foil, card_market_id: cardMarketId };
+
+            const response = await fetch(`${CARDS_API_ENDPOINT}/collection/removeCard`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${session}`,
                 },
-                body: JSON.stringify({ id }),
+                body: JSON.stringify(body),
             });
             if (!response.ok) {
                 throw new Error('Failed to remove card');
             }
-            fetchCollection();
+            await fetchCollection();
         } catch (error) {
             console.error('Error removing card:', error);
         }
@@ -115,7 +155,7 @@ export const CardProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [session]);
 
     return (
-        <CardContext.Provider value={{ cardData, addCard, updateCardQuantity, fetchCollection, removeCard }}>
+        <CardContext.Provider value={{ cardCollectionData: cardData, addCard, updateCardQuantity, fetchCollection, removeCard }}>
             {children}
         </CardContext.Provider>
     );

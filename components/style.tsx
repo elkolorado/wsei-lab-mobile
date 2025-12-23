@@ -3,6 +3,24 @@ import { colors } from "@/constants/themeColors";
 
 export default function style() {
   return StyleSheet.create({
+    leftAction: {
+      width: 80,
+      backgroundColor: 'red',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    rightAction: {
+      width: 80,
+      backgroundColor: '#28a745',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 0,
+    },
+    actionText: {
+      color: 'white',
+      fontWeight: '600',
+      padding: 20,
+    },
     container: {
       flex: 1,
       justifyContent: 'center',
@@ -10,16 +28,27 @@ export default function style() {
       paddingHorizontal: 16,
       paddingTop: 16
     },
-    scannedCardsContainer: {
-      flexBasis: "auto",
-      flexDirection: "column",
-      flexShrink: 0,
-      marginTop: 16,
-      marginBottom: 32,
-      maxHeight: 175,
+    desktopContainer: {
+      flexDirection: 'row',
+      gap: 20,
       maxWidth: 1506,
-      marginInline: "auto",
+      marginHorizontal: "auto", // zamiast marginInline dla lepszej kompatybilności RN
       width: "100%",
+      height: '100%', // Wypełnij rodzica
+      backgroundColor: colors.colorBackground,
+    },
+    column: {
+      flex: 3, // Daj obu kolumnom równe szanse (lub np. 2 dla kamery, 1 dla listy)
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%', // Ważne: kolumna musi mieć określoną wysokość
+    },
+    scannedCardsContainer: {
+      flex: 1, // Pozwól temu kontenerowi rosnąć i wypełniać kolumnę
+      marginTop: 12,
+      // paddingBottom: 16,
+      width: "100%",
+      // Usuwamy na chwilę maxHeight na webie, bo flex: 1 załatwi sprawę
     },
 
     capturedImage: {
@@ -64,7 +93,10 @@ export default function style() {
       paddingBottom: 10,
     },
     camera: {
-      flex: 1,
+      // flex: 1,
+      width: '100%',
+      height: '100%',
+      resizeMode: 'cover',
     },
     buttonContainer: {
       flex: 1,

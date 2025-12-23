@@ -1,37 +1,72 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, FlatList, Image, TouchableOpacity, StyleSheet, Modal, Button } from 'react-native';
-import { CardProvider, useCardContext } from '../context/CardContext';
+import { View, Text, TextInput, Image, TouchableOpacity, StyleSheet, Modal, Button, FlatList, useWindowDimensions, Platform } from 'react-native';
+import CardItem from '@/components/CardItem';
+import { API_ENDPOINT } from '@/constants/apiConfig';
+import { CardProvider, useCardContext, CollectionItem } from '../context/CardContext';
 import LoginScreen from './login';
 import { useSession } from '@/hooks/useAuth';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors } from '@/constants/themeColors';
+import { FontAwesome6 } from '@expo/vector-icons';
 
-interface Card {
-    id: string;
-    name: string;
-    image: string;
-    set: string;
-}
+// using CollectionItem from context for collection rows
 
 
 
 const Collection: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
-    const [activeSet, setActiveSet] = useState('Set 1');
-    const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+    const [selectedCard, setSelectedCard] = useState<CollectionItem | null>(null);
     const [isModalVisible, setModalVisible] = useState(false);
-    const { cardData } = useCardContext();
+    const { cardCollectionData } = useCardContext();
     const { session } = useSession();
-    const { addCard, removeCard } = useCardContext();
-    if (!session) {
-        return <LoginScreen />;
-    }
+    const insets = useSafeAreaInsets();
 
-    const filteredCards = cardData.filter(
-        (card) =>
-            // card.set === activeSet &&
-            card.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    if (!session) return <LoginScreen />;
 
-    const handleCardPress = (card: Card) => {
+    const filteredCards = cardCollectionData.filter((card) => (card.name).toLowerCase().includes(searchQuery.toLowerCase()));
+
+    const totalFromPrice = filteredCards.reduce((sum, card) => sum + (card.from_price ?? 0) * (card.quantity ?? 0), 0);
+    const totalFromPriceFoil = filteredCards.reduce((sum, card) => sum + (card.low_foil ?? 0) * (card.quantity_foil ?? 0), 0);
+    const totalValue = totalFromPrice + totalFromPriceFoil;
+    const totalCards = filteredCards.reduce((sum, card) => sum + (card.quantity ?? 0) + (card.quantity_foil ?? 0), 0);
+
+
+    const totalTrendPrice = filteredCards.reduce((sum, card) => sum + ((card.price_trend ? card.price_trend : (!card.avg && !card.avg_1d) ? card.trend_foil : 0) ?? 0) * (card.quantity ?? 0), 0);
+
+    const totalTrendValue = totalTrendPrice;
+
+
+    const WindowGrid: React.FC<{ data: any[]; renderCard: (item: any) => React.ReactNode }> = ({ data, renderCard }) => {
+        const { width } = useWindowDimensions();
+
+        const getColumnsForWidth = (w: number) => {
+            if (w >= 3000) return 12;
+            if (w >= 2400) return 10;
+            if (w >= 1920) return 8;
+            if (w >= 1400) return 6;
+            if (w >= 1000) return 4;
+            if (w >= 600) return 3;
+            return 2;
+        };
+
+        const numColumns = Math.max(1, getColumnsForWidth(width));
+
+        return (
+            <FlatList
+                data={data}
+                keyExtractor={(item, idx) => String(item.user_collection_id ?? item.cardMarketId ?? item.card_id ?? idx)}
+                numColumns={numColumns}
+                renderItem={({ item }) => (
+                    <View style={{ width: `${100 / numColumns}%`, padding: 4 }}>
+                        {renderCard(item)}
+                    </View>
+                )}
+                contentContainerStyle={{ padding: 8 }}
+            />
+        );
+    };
+
+    const handleCardPress = (card: CollectionItem) => {
         setSelectedCard(card);
         setModalVisible(true);
     };
@@ -42,86 +77,86 @@ const Collection: React.FC = () => {
     };
 
     return (
-        <View style={styles.container}>
-            {/* Search Bar */}
-            <TextInput
-                style={styles.searchBar}
-                placeholder="Search by name..."
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-            />
+        <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+            <View style={{ maxWidth: 1536, marginInline: 'auto', flex: 1, width: '100%' }}>
 
-            {/* Tabs for Card Sets */}
-            {/* <View style={styles.tabs}>
-                {['Set 1', 'Set 2'].map((set) => (
-                    <TouchableOpacity
-                        key={set}
-                        style={[styles.tab, activeSet === set && styles.activeTab]}
-                        onPress={() => setActiveSet(set)}
-                    >
-                        <Text style={styles.tabText}>{set}</Text>
-                    </TouchableOpacity>
-                ))}
-            </View> */}
+                {/* My collection 2 cards (dot) $77.98 total value */}
 
-            {/* Card Gallery */}
-            <FlatList
-                data={filteredCards}
-                keyExtractor={(item) => item.id}
-                numColumns={4}
-                columnWrapperStyle={filteredCards.length % 4 !== 0 ? { justifyContent: 'flex-start' } : null}
-                renderItem={({ item }) => (
-                    <TouchableOpacity style={styles.card} onPress={() => handleCardPress(item)}>
-                        <View>
-                            <Image source={{ uri: 'https://www.dbs-cardgame.com/fw/images/cards/card/en/' + item.name }} style={styles.cardImage} />
-                            <Text style={styles.cardName}>{item.name}</Text>
-                            <View style={{ flexDirection: 'row', marginTop: 5, justifyContent: 'space-between', alignItems: 'center', zIndex: 9999 }}>
 
-                                <Button
-                                    title="-"
-                                    color="red"
-                                    onPress={() => removeCard(item.name.split('.webp')[0])}
-                                />
+                {/* Filters bar - search */}
+                <View style={styles.filters}>
+                    <TextInput
+                        style={{ outline: 'none', color: colors.foreground, borderColor: colors.border, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, height: 48, backgroundColor: 'rgba(255,255,255,0.05)' }}
+                        placeholder="Search cards by name"
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                        selectionColor={colors.primary}
+                        placeholderTextColor={colors.colorForeground}
+                    />
 
-                                <Text style={styles.cardQuantity}>Quantity: {item.quantity}</Text>
-                                <Button
-                                    title="+"
-                                    onPress={() => addCard({...item, name: item.name.split('.webp')[0]})}
-                                />
-                            </View>
-                        </View>
-                    </TouchableOpacity>
-                )}
-            />
+                    <View>
+                        {/* <Text style={{ color: colors.foreground, fontSize: 14, fontWeight: 'bold', marginVertical: 16 }}>My Collection</Text> */}
+                        <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 12 }}>
+                            {totalCards} cards · <Text style={{ color: colors.primary }}>{totalValue}€</Text> <Text><FontAwesome6 name="arrow-trend-up" size={14} /> {totalTrendValue ? `${Number(totalTrendValue)}€` : ''}</Text></Text>
+                    </View>
 
-            {/* Modal for Fullscreen Image */}
-            <Modal visible={isModalVisible} transparent={true} animationType="fade">
-                <View style={styles.modalContainer}>
-                    <TouchableOpacity style={styles.modalCloseButton} onPress={closeModal}>
-                        <Text style={styles.modalCloseText}>Close</Text>
-                    </TouchableOpacity>
-                    {selectedCard && (
-                        <Image source={{ uri: 'https://www.dbs-cardgame.com/fw/images/cards/card/en/' + selectedCard.name }} style={styles.fullscreenImage} />
-                    )}
                 </View>
-            </Modal>
+
+
+
+                {/* Card Gallery — responsive grid using same layout as cards.tsx */}
+                <WindowGrid
+                    data={filteredCards}
+                    renderCard={(item: CollectionItem) => (
+                        <CardItem
+                            card={item}
+                            showCollection={true}
+                            onPress={() => handleCardPress(item)}
+                        />
+                    )}
+                />
+
+                {/* Modal for Fullscreen Image */}
+                <Modal visible={isModalVisible} transparent={true} animationType="fade">
+                    <View style={styles.modalContainer}>
+                        <TouchableOpacity style={styles.modalCloseButton} onPress={closeModal}>
+                            <Text style={styles.modalCloseText}>Close</Text>
+                        </TouchableOpacity>
+                        {selectedCard && (
+                            <Image source={{ uri: selectedCard.image_url || `${API_ENDPOINT}/card-image/${selectedCard.tcg_id}/${selectedCard.cardMarketId}.png` }} style={styles.fullscreenImage} />
+                        )}
+                    </View>
+                </Modal>
+            </View>
         </View>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        padding: 10,
-        backgroundColor: '#fff',
+    container: { flex: 1, backgroundColor: colors.background },
+    filters: {
+        paddingHorizontal: 16,
+        gap: 12,
     },
-    searchBar: {
-        height: 40,
-        borderColor: '#ccc',
+    searchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderRadius: 12,
         borderWidth: 1,
-        borderRadius: 5,
-        paddingHorizontal: 10,
-        marginBottom: 10,
+        borderColor: 'rgba(255,255,255,0.1)',
+        paddingHorizontal: 12,
+    },
+    search: {
+        height: 48,
+        color: colors.foreground,
+        fontSize: 16,
+        borderRadius: 12,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderWidth: 1,
+        borderColor: colors.border,
+        paddingHorizontal: 12,
+        ...Platform.select({ web: { outlineStyle: 'none' } }),
     },
     tabs: {
         flexDirection: 'row',

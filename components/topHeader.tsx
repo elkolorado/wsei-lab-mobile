@@ -24,9 +24,9 @@ const TopHeader: React.FC<Props> = ({ navigation, route, options }) => {
 
                 <View style={[styles.row, styles.topRow, { paddingTop: insets.top + 12 }]}>
                     <View style={styles.brandRow}>
-                        <View style={styles.logo}>
+                        {/* <View style={styles.logo}>
                             <Text style={styles.logoEmoji}>📷</Text>
-                        </View>
+                        </View> */}
 
                         <View>
                             <Text style={styles.title}>TCG Scanner</Text>
@@ -35,11 +35,7 @@ const TopHeader: React.FC<Props> = ({ navigation, route, options }) => {
                     </View>
 
                     <View style={styles.actionsRow}>
-                        <View style={styles.userWrap}>
-                            <View style={styles.userAvatar}>
-                                <Text style={styles.userInitials}>DU</Text>
-                            </View>
-                        </View>
+
 
                         <TouchableOpacity
                             onPress={logout}
@@ -53,7 +49,7 @@ const TopHeader: React.FC<Props> = ({ navigation, route, options }) => {
             </View>
 
             {/* Bottom Row: Navigation Pills (Web Only) */}
-            {Platform.OS === "web" && (
+            {true && (
                 <View style={styles.bottomContainer}>
                     <View style={[styles.row, styles.bottomRow]}>
                         <View style={styles.navRow}>
