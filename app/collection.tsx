@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Image, TouchableOpacity, StyleSheet, Modal, Button, FlatList, useWindowDimensions, Platform } from 'react-native';
+import { View, Text, TextInput,  TouchableOpacity, StyleSheet, FlatList, useWindowDimensions, Platform } from 'react-native';
 import CardItem from '@/components/CardItem';
-import { API_ENDPOINT } from '@/constants/apiConfig';
-import { CardProvider, useCardContext, CollectionItem } from '../context/CardContext';
-import LoginScreen from './login';
+
+import { useCardContext, CollectionItem } from '../context/CardContext';
 import { useSession } from '@/hooks/useAuth';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/constants/themeColors';
@@ -11,6 +10,7 @@ import { fetchCardsWithPrices } from '@/actions/cardsApi';
 import { ActivityIndicator } from 'react-native';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { Linking } from 'react-native';
+import { Redirect } from 'expo-router';
 
 // using CollectionItem from context for collection rows
 
@@ -48,19 +48,19 @@ const WindowGrid: React.FC<{ data: any[]; renderCard: (item: any) => React.React
 
 const Collection: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedCard, setSelectedCard] = useState<CollectionItem | null>(null);
-    const [isModalVisible, setModalVisible] = useState(false);
+
     const [filterMode, setFilterMode] = useState<'all' | 'owned' | 'unowned'>('all');
     const [unownedCards, setUnownedCards] = useState<CollectionItem[]>([]);
     const [loadingUnowned, setLoadingUnowned] = useState(false);
     const [sortBy, setSortBy] = useState<'price' | 'availability' | 'name' | 'priceTrend' | 'dateAdded'>('price');
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-    const { cardCollectionData } = useCardContext();
+    const { cardCollectionData, tcgName } = useCardContext();
     const { session } = useSession();
     const insets = useSafeAreaInsets();
 
-    if (!session) return <LoginScreen />;
-
+    if (!session) {
+        return <Redirect href="/login" />;
+    }
     // Build base list depending on filter mode, then apply search/owned filters (when applicable) and sorting
     let baseList: CollectionItem[] = filterMode === 'unowned' ? unownedCards.slice() : cardCollectionData.slice();
 
@@ -88,9 +88,9 @@ const Collection: React.FC = () => {
         });
     } else if (sortBy === 'availability') {
         baseList.sort((a: CollectionItem, b: CollectionItem) => dir * (Number(a.available ?? a.available_foil ?? 0) - Number(b.available ?? b.available_foil ?? 0)));
-    
+
     }
-        else if (sortBy === 'name') {
+    else if (sortBy === 'name') {
         baseList.sort((a: CollectionItem, b: CollectionItem) => dir * String(a.name || '').localeCompare(String(b.name || '')));
     } else if (sortBy === 'dateAdded') {
         baseList.sort((a: CollectionItem, b: CollectionItem) => {
@@ -112,7 +112,7 @@ const Collection: React.FC = () => {
     const totalTrendValue = totalTrendPrice;
 
 
-    
+
 
     // Fetch unowned cards list when user toggles to Unowned
     React.useEffect(() => {
@@ -121,8 +121,8 @@ const Collection: React.FC = () => {
             if (filterMode !== 'unowned') return;
             setLoadingUnowned(true);
             try {
-                const tcg_name = 'dragon ball fusion world';
-                const cardsResult = await fetchCardsWithPrices(tcg_name).catch(() => fetchCardsWithPrices(tcg_name));
+                const tcg = tcgName || 'dragon ball fusion world';
+                const cardsResult = await fetchCardsWithPrices(tcg);
                 if (!mounted) return;
                 const cardsArray = Array.isArray(cardsResult) ? cardsResult : (cardsResult && cardsResult.cards) ? cardsResult.cards : [];
                 // exclude cards that appear in user's collection (match by cardMarketId or id/card_id)
@@ -142,17 +142,8 @@ const Collection: React.FC = () => {
         };
         loadUnowned();
         return () => { mounted = false };
-    }, [filterMode, cardCollectionData]);
+    }, [filterMode, cardCollectionData, tcgName]);
 
-    const handleCardPress = (card: CollectionItem) => {
-        setSelectedCard(card);
-        setModalVisible(true);
-    };
-
-    const closeModal = () => {
-        setSelectedCard(null);
-        setModalVisible(false);
-    };
 
     return (
         <View style={[styles.container, { paddingBottom: insets.bottom }]}>
@@ -247,7 +238,7 @@ const Collection: React.FC = () => {
                     </View>
                 </View>
 
-                
+
 
 
 
@@ -263,30 +254,20 @@ const Collection: React.FC = () => {
                                 showCollection={true}
                                 dimmed={filterMode === 'unowned'}
                                 onPress={(c: any) => {
-                  const url = c?.card_url || c?.cardUrl || c?.card_url;
-                  if (url) {
-                    Linking.openURL(String(url)).catch((err) => console.warn('Failed to open url', err));
-                  } else {
-                    console.log('No card_url for', c);
-                  }
-                }}
+                                    const url = c?.card_url || c?.cardUrl || c?.card_url;
+                                    if (url) {
+                                        Linking.openURL(String(url)).catch((err) => console.warn('Failed to open url', err));
+                                    } else {
+                                        console.log('No card_url for', c);
+                                    }
+                                }}
                             />
                         )}
                     />
                 )}
 
 
-                {/* Modal for Fullscreen Image */}
-                <Modal visible={isModalVisible} transparent={true} animationType="fade">
-                    <View style={styles.modalContainer}>
-                        <TouchableOpacity style={styles.modalCloseButton} onPress={closeModal}>
-                            <Text style={styles.modalCloseText}>Close</Text>
-                        </TouchableOpacity>
-                        {selectedCard && (
-                            <Image source={{ uri: selectedCard.image_url || `${API_ENDPOINT}/card-image/${selectedCard.tcg_id}/${selectedCard.cardMarketId}.png` }} style={styles.fullscreenImage} />
-                        )}
-                    </View>
-                </Modal>
+
             </View>
         </View>
     );
@@ -357,19 +338,19 @@ const styles = StyleSheet.create({
     },
     toggleText: { color: colors.foreground, fontSize: 13, fontWeight: '600' },
     toggleTextActive: { color: '#000', fontWeight: '700' },
-        sortButtons: {
-                flexDirection: 'row',
-                flexWrap: 'wrap',
-                gap: 8,
-                marginTop: 8
-        },
-        sortButton: {
-                paddingVertical: 8,
-                paddingHorizontal: 14,
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.1)',
-                backgroundColor: 'rgba(255,255,255,0.03)'
+    sortButtons: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginTop: 8
+    },
+    sortButton: {
+        paddingVertical: 8,
+        paddingHorizontal: 14,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: 'rgba(255,255,255,0.03)'
     },
     sortActive: {
         backgroundColor: colors.primary,

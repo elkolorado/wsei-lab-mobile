@@ -20,6 +20,8 @@ interface CardContextProps {
     updateCardQuantity: (cardMarketId: number, quantity: number) => Promise<void>;
     fetchCollection: (tcg_id?: number) => Promise<void>;
     removeCard: (cardMarketId: number, quantity?: number, quantity_foil?: number) => Promise<void>;
+    tcgName: string;
+    setTcgName: (name: string) => void;
 }
 
 const CardContext = createContext<CardContextProps | undefined>(undefined);
@@ -28,6 +30,7 @@ export default CardContext;
 
 export const CardProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [cardData, setCardData] = useState<CollectionItem[]>([]);
+    const [tcgName, setTcgName] = useState<string>('dragon ball fusion world');
     const { session } = useSession();
 
     // Fetch the collection from the backend
@@ -155,7 +158,7 @@ export const CardProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [session]);
 
     return (
-        <CardContext.Provider value={{ cardCollectionData: cardData, addCard, updateCardQuantity, fetchCollection, removeCard }}>
+        <CardContext.Provider value={{ cardCollectionData: cardData, addCard, updateCardQuantity, fetchCollection, removeCard, tcgName, setTcgName }}>
             {children}
         </CardContext.Provider>
     );

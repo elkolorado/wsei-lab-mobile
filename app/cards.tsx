@@ -7,12 +7,12 @@ import { colors } from '@/constants/themeColors';
 import { Picker } from '@react-native-picker/picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontAwesome6 } from '@expo/vector-icons';
+import { useCardContext } from '../context/CardContext';
 
 const CardsView: React.FC = () => {
   const [expansions, setExpansions] = useState<string[]>([]);
   const [selectedExpansion, setSelectedExpansion] = useState<string | null>(null);
   const [tcgs, setTCGs] = useState<string[]>([]);
-  const [selectedTCG, setSelectedTCG] = useState<string | null>(null);
   const [cards, setCards] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -22,7 +22,8 @@ const CardsView: React.FC = () => {
   const [sortBy, setSortBy] = useState<'price' | 'availability' | 'name' | 'priceTrend'>('price');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
-  const tcg_name = selectedTCG || 'dragon ball fusion world';
+  const { tcgName, setTcgName } = useCardContext();
+  const tcg_name = tcgName || 'dragon ball fusion world';
   const insets = useSafeAreaInsets();
   // 1. Keep TCG fetch on mount only
   useEffect(() => {
