@@ -103,7 +103,7 @@ const FoundCardDetails: React.FC<FoundCardDetailsProps> = ({ cardName, cardInfo,
                         />
                     )}
                     {photoUri && (
-                        <Image source={{ uri: photoUri }} style={[styles.cardImageTaken, styles.cardImage]} />
+                        <Image source={{ uri: photoUri }} style={styles.cardImage} />
                     )}
 
                 </View>

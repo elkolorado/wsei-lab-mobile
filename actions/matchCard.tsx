@@ -10,12 +10,13 @@ export async function matchCard(uri: string): Promise<string> {
         let uriArray = uri.split(".");
         let fileType = uriArray[uriArray.length - 1];
       
-        let formData = new FormData();
-        formData.append("file", {
-          uri,
-          name: `photo.${fileType}`,
-          type: `image/${fileType}`,
-        });
+                let formData = new FormData();
+                // React Native FormData file object uses { uri, name, type } — cast to any for TypeScript
+                formData.append("file", ({
+                    uri,
+                    name: `photo.${fileType}`,
+                    type: `image/${fileType}`,
+                } as any));
 
         // Define request options
         const requestOptions = {

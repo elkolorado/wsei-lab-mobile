@@ -6,6 +6,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "@/hooks/useAuth";
 import { TAB_ROUTES } from "@/constants/tabRoutes";
 import { usePathname, useRouter } from "expo-router";
+import { Picker } from '@react-native-picker/picker';
+import { useCardContext } from "@/context/CardContext";
+import PrimaryButton from "./primaryButton";
 type Props = {
     navigation?: any;
     route?: any;
@@ -17,6 +20,11 @@ const TopHeader: React.FC<Props> = ({ navigation, route, options }) => {
     const { logout } = useSession();
     const router = useRouter();
     const pathname = usePathname();
+    const { tcgName, setTcgName } = useCardContext();
+    const tcgs = [
+        'dragon ball fusion world',
+        'riftbound'
+    ];
 
     return (
         <View style={[styles.container]}>
@@ -31,6 +39,9 @@ const TopHeader: React.FC<Props> = ({ navigation, route, options }) => {
                         <View>
                             <Text style={styles.title}>TCG Scanner</Text>
                             <Text style={styles.subtitle}>Scan & Collect</Text>
+                        </View>
+                        <View style={styles.tcgRow}>
+                            <PrimaryButton textStyle={{fontSize: 10}} onPress={() => setTcgName(tcgName == 'Riftbound' ? 'dragon ball fusion world' : 'Riftbound')} title={tcgName ? tcgName.toUpperCase() : 'Select TCG'} />
                         </View>
                     </View>
 
@@ -189,5 +200,15 @@ const styles = StyleSheet.create({
     },
     pillTextActive: {
         color: colors.card, // Dark text on gold background
+    },
+    tcgRow: {
+        marginLeft: 12,
+        minWidth: 160,
+        maxWidth: 260,
+    },
+    picker: {
+        height: 36,
+        color: colors.foreground,
+        backgroundColor: 'transparent',
     },
 });

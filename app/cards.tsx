@@ -1,14 +1,45 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator, useWindowDimensions, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator, useWindowDimensions, Platform } from 'react-native';
 import CardItem from '@/components/CardItem';
 import { Linking } from 'react-native';
-import { fetchExpansions, fetchCardsWithPrices, fetchCards, fetchTCGs } from '@/actions/cardsApi';
+import { fetchExpansions, fetchCardsWithPrices } from '@/actions/cardsApi';
 import { colors } from '@/constants/themeColors';
-import { Picker } from '@react-native-picker/picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { useCardContext } from '../context/CardContext';
 
+
+// Responsive grid helper using window width to determine number of columns
+const WindowGrid: React.FC<{ data: any[]; renderCard: (item: any) => React.ReactNode }> = ({ data, renderCard }) => {
+  const { width } = useWindowDimensions();
+
+  const getColumnsForWidth = (w: number) => {
+    // breakpoints (px) - tune as needed
+    if (w >= 3000) return 12; // ultra ultra-wide
+    if (w >= 2400) return 10; // ultra-wide
+    if (w >= 1920) return 8; // fullHD and above
+    if (w >= 1400) return 6; // large desktop
+    if (w >= 1000) return 4; // laptop / tablet landscape
+    if (w >= 600) return 3; // tablet
+    return 2; // mobile
+  };
+
+  const numColumns = Math.max(1, getColumnsForWidth(width));
+
+  return (
+    <FlatList
+      data={data}
+      keyExtractor={(item, idx) => String(item.id || item.cardMarketId || item.name || idx)}
+      numColumns={numColumns}
+      renderItem={({ item }) => (
+        <View style={{ width: `${100 / numColumns}%`, padding: 4 }}>
+          {renderCard(item)}
+        </View>
+      )}
+      contentContainerStyle={{ padding: 8 }}
+    />
+  );
+};
 const CardsView: React.FC = () => {
   const [expansions, setExpansions] = useState<string[]>([]);
   const [selectedExpansion, setSelectedExpansion] = useState<string | null>(null);
@@ -22,26 +53,10 @@ const CardsView: React.FC = () => {
   const [sortBy, setSortBy] = useState<'price' | 'availability' | 'name' | 'priceTrend'>('price');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
-  const { tcgName, setTcgName } = useCardContext();
-  const tcg_name = tcgName || 'dragon ball fusion world';
+  const { tcgName } = useCardContext();
+
   const insets = useSafeAreaInsets();
   // 1. Keep TCG fetch on mount only
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const tcgList = await fetchTCGs();
-        if (!mounted) return;
-        if (Array.isArray(tcgList)) {
-          setTCGs(tcgList.map((t: any) => t.name));
-        }
-      } catch (err) {
-        console.warn('Could not fetch TCGs', err);
-      }
-    })();
-    return () => { mounted = false };
-  }, []);
-
   // 2. Combined Effect for Expansions AND Cards
   // This triggers every time tcg_name (selectedTCG) changes
   useEffect(() => {
@@ -57,8 +72,8 @@ const CardsView: React.FC = () => {
       try {
         // Fetch Expansions and Cards in parallel for better performance
         const [exps, cardResult] = await Promise.all([
-          fetchExpansions(tcg_name),
-          fetchCardsWithPrices(tcg_name).catch(() => fetchCards(tcg_name)) // Fallback if price fetch fails
+          fetchExpansions(tcgName),
+          fetchCardsWithPrices(tcgName) // Fallback if price fetch fails
         ]);
 
         if (!mounted) return;
@@ -93,7 +108,7 @@ const CardsView: React.FC = () => {
     loadTcgData();
 
     return () => { mounted = false };
-  }, [tcg_name]); // <--- Crucial: Effect runs whenever this changes
+  }, [tcgName]); // <--- Crucial: Effect runs whenever this changes
 
   const getCardExpansionName = (c: any) => {
     // attempt several possible fields the API might return
@@ -110,37 +125,7 @@ const CardsView: React.FC = () => {
     return '';
   };
 
-  // Responsive grid helper using window width to determine number of columns
-  const WindowGrid: React.FC<{ data: any[]; renderCard: (item: any) => React.ReactNode }> = ({ data, renderCard }) => {
-    const { width } = useWindowDimensions();
 
-    const getColumnsForWidth = (w: number) => {
-      // breakpoints (px) - tune as needed
-      if (w >= 3000) return 12; // ultra ultra-wide
-      if (w >= 2400) return 10; // ultra-wide
-      if (w >= 1920) return 8; // fullHD and above
-      if (w >= 1400) return 6; // large desktop
-      if (w >= 1000) return 4; // laptop / tablet landscape
-      if (w >= 600) return 3; // tablet
-      return 2; // mobile
-    };
-
-    const numColumns = Math.max(1, getColumnsForWidth(width));
-
-    return (
-      <FlatList
-        data={data}
-        keyExtractor={(item, idx) => String(item.id || item.cardMarketId || item.name || idx)}
-        numColumns={numColumns}
-        renderItem={({ item }) => (
-          <View style={{ width: `${100 / numColumns}%`, padding: 4 }}>
-            {renderCard(item)}
-          </View>
-        )}
-        contentContainerStyle={{ padding: 8 }}
-      />
-    );
-  };
 
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -185,9 +170,7 @@ const CardsView: React.FC = () => {
     return out;
   }, [cards, selectedExpansion, searchQuery, rarityFilter, sortBy, sortDir]);
 
-  const renderCard = ({ item }: { item: any }) => (
-    <CardItem card={item} onPress={(c) => console.log('Card press', c)} />
-  );
+
 
   return (
     <View style={[
@@ -206,7 +189,7 @@ const CardsView: React.FC = () => {
             selectionColor={colors.primary}
             placeholderTextColor={colors.colorForeground}
           />
-{/* 
+          {/* 
           <View style={styles.dropdownRow}>
             <View style={styles.dropdownContainer}>
               <Picker
@@ -238,7 +221,7 @@ const CardsView: React.FC = () => {
             </View>
           </View> */}
 
-          <View style={styles.rowControls}>
+          <View>
 
             <View style={styles.sortButtons}>
               <TouchableOpacity
