@@ -11,7 +11,7 @@ export type CollectionItem = CardMarketCard & {
     card_id?: number; // underlying Card.id
     quantity: number;
     quantity_foil?: number;
-    last_updated?: string;
+    collection_last_updated?: string; // uc.last_updated
 };
 
 interface CardContextProps {

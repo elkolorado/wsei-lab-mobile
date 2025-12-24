@@ -1,91 +1,83 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Image } from 'expo-image'; // Import from expo-image
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { useCardContext } from '@/context/CardContext';
-
-interface Props {
-  card: CardMarketCard;
-  onPress?: (card: any) => void;
-  showCollection?: boolean;
-}
 
 import { API_ENDPOINT } from '@/constants/apiConfig';
 import { colors } from '@/constants/themeColors';
 import { CardMarketCard } from './foundCardDetails';
 
-const CardItem: React.FC<Props> = ({ card, onPress, showCollection = false }) => {
-  const [aspectRatio, setAspectRatio] = useState<number | null>(null);
-  // prefer image_url from API; fallback to constructed card-image endpoint
-  const imageUrl = `${API_ENDPOINT}/card-image/${card.tcg_id}/${card.cardMarketId}.png`;
-  console.log('CardItem imageUrl:', imageUrl);
-  const name = card.name || 'Unknown';
-  // const price = (card.fromPrice ?? card.fromPrice ?? card.price ?? card.avg_price ?? card.avgPrice);
-  const price = card.from_price
-  const priceTrend = card.price_trend ? card.price_trend : (!card.avg && !card.avg_1d) ? card.trend_foil : null;
-  console.log(card);
-  useEffect(() => {
-    let mounted = true;
-    const uri = imageUrl; // imageUrl already points to a full URL in many cases
-    // Try to get remote image dimensions so we can preserve aspect ratio
-    Image.getSize(
-      uri,
-      (width, height) => {
-        if (!mounted) return;
-        if (width && height) setAspectRatio(width / height);
-      },
-      (err) => {
-        // ignore errors; leave aspectRatio null to use fallback height
-        // console.warn('Image.getSize failed for', uri, err);
-      }
-    );
+interface Props {
+  card: CardMarketCard;
+  onPress?: (card: any) => void;
+  showCollection?: boolean;
+  dimmed?: boolean;
+}
 
-    return () => {
-      mounted = false;
-    };
-  }, [imageUrl]);
-  // collection integration (only used when `showCollection` is true)
+
+
+const CardItem: React.FC<Props> = ({ card, onPress, showCollection = false, dimmed = false }) => {
+  const imageUrl = `${API_ENDPOINT}/card-image/${card.tcg_id}/${card.cardMarketId}.png`;
+  
+  const name = card.name || 'Unknown';
+  const price = card.from_price;
+  const priceTrend = card.price_trend ? card.price_trend : (!card.avg && !card.avg_1d) ? card.trend_foil : null;
+
+  // Collection Logic
   const { cardCollectionData, addCard, removeCard } = useCardContext();
   const [collectionQty, setCollectionQty] = useState<number>(0);
 
   useEffect(() => {
     if (!showCollection) return;
-    const entry = cardCollectionData?.find((c) => c.cardMarketId === card.cardMarketId || c.card_id === card.card_id);
+    const entry = cardCollectionData?.find((c) => {
+      if (c.cardMarketId != null && card.cardMarketId != null) {
+        if (c.cardMarketId === card.cardMarketId) return true;
+      }
+      if (c.card_id != null && card.card_id != null) {
+        if (c.card_id === card.card_id) return true;
+      }
+      return false;
+    });
     setCollectionQty(entry?.quantity ?? 0);
   }, [showCollection, cardCollectionData, card.cardMarketId, card.card_id]);
 
   const handleAdd = async () => {
-    try {
-      await addCard(card, 1, 0);
-    } catch (e) {
-      console.error('addCard failed', e);
-    }
+    try { await addCard(card, 1, 0); } catch (e) { console.error(e); }
   };
 
   const handleRemove = async () => {
     try {
       const id = card.cardMarketId || card.card_id || 0;
-      if (!id) return;
-      await removeCard(id, 1, 0);
-    } catch (e) {
-      console.error('removeCard failed', e);
-    }
+      if (id) await removeCard(id, 1, 0);
+    } catch (e) { console.error(e); }
   };
+
   return (
     <TouchableOpacity style={styles.card} onPress={() => onPress && onPress(card)}>
-      {imageUrl ? (
-        <Image source={{ uri: imageUrl }} style={[styles.image, aspectRatio ? { aspectRatio } : styles.imageFallback]} />
-      ) : (
-        <View style={[styles.image, styles.placeholder]}>
-          <Text style={styles.placeholderText}>No Image</Text>
-        </View>
-      )}
+      <Image
+        source={imageUrl}
+        style={[
+          styles.image, 
+          // Grayscale filter works directly on expo-image
+          dimmed && ({ filter: 'grayscale(1)'} as any) 
+        ]}
+        contentFit="contain"
+        transition={200} // Smooth fade-in
+        placeholderContentFit="contain"
+      />
+
       <View style={styles.meta}>
         <Text numberOfLines={1} style={styles.name}>{name}</Text>
         <View style={styles.row}>
           <Text style={styles.price}>{typeof price === 'number' ? `${price}€` : (price ? String(price) : '-')}</Text>
-          <Text style={styles.price}><FontAwesome6 name="arrow-trend-up" size={14} /> {priceTrend ? `${Number(priceTrend)}€` : ''}</Text>
-          {/* <Text style={styles.rarity}>{rarity}</Text> */}
+          {priceTrend && (
+             <Text style={styles.price}>
+                <FontAwesome6 name="arrow-trend-up" size={14} /> {Number(priceTrend)}€
+             </Text>
+          )}
         </View>
+
         {showCollection && (
           <View style={styles.collectionRow}>
             <TouchableOpacity onPress={handleRemove} style={styles.qtyBtn} disabled={collectionQty <= 0}>
@@ -97,7 +89,6 @@ const CardItem: React.FC<Props> = ({ card, onPress, showCollection = false }) =>
             </TouchableOpacity>
           </View>
         )}
-        {/* <Text style={styles.availability}>Avail: {String(availability)}{availability_foil ? ` / ${String(availability_foil)}` : ''}</Text> */}
       </View>
     </TouchableOpacity>
   );
@@ -115,20 +106,9 @@ const styles = StyleSheet.create({
   },
   image: {
     width: '100%',
-    // when aspectRatio is known we will use that; this provides base styling
-    resizeMode: 'contain',
-    backgroundColor: '#f6f6f6',
-  },
-  imageFallback: {
-    width: '100%',
-    height: 160,
-  },
-  placeholder: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  placeholderText: {
-    color: '#999',
+    // Typical trading card aspect ratio is 2.5 / 3.5
+    aspectRatio: 0.714, 
+    backgroundColor: '#1a1a1a',
   },
   meta: {
     padding: 8,
@@ -153,7 +133,6 @@ const styles = StyleSheet.create({
   qtyBtn: {
     width: 34,
     height: 28,
-    flexDirection: "row",
     alignItems: "center",
     borderRadius: 8,
     backgroundColor: "rgba(255,255,255,0.03)",
@@ -175,15 +154,6 @@ const styles = StyleSheet.create({
   price: {
     color: colors.primary,
     fontWeight: '700',
-  },
-  rarity: {
-    fontSize: 12,
-    color: '#555',
-  },
-  availability: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 6,
   },
 });
 
