@@ -116,7 +116,7 @@ const FoundCardDetails: React.FC<FoundCardDetailsProps> = ({ cardName, cardInfo,
                     </View>
 
                     <View style={styles.priceContainer}>
-                        <Text style={styles.priceLabel}><FontAwesome6 name="arrow-trend-up" size={14} /> Trend</Text>
+                        <Text style={styles.priceLabel}><FontAwesome6 name="arrow-trend-up" size={10} /> Trend</Text>
 
                         <Text style={styles.priceValue}>{priceTrend ? `${Number(priceTrend)}€` : ''}</Text>
 

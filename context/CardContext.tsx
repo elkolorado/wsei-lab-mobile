@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useSession } from '@/hooks/useAuth';
 import { CARDS_API_ENDPOINT } from '@/constants/apiConfig';
 import { CardMarketCard } from '@/components/foundCardDetails';
+import { fetchCardsWithPrices } from '@/actions/cardsApi';
 
 // Combined type: CardMarketCard fields plus minimal user-collection fields returned by backend
 export type CollectionItem = CardMarketCard & {
@@ -16,6 +17,8 @@ export type CollectionItem = CardMarketCard & {
 
 interface CardContextProps {
     cardCollectionData: CollectionItem[];
+    allCards: CollectionItem[];
+    fetchAllCardsForTcg: (tcg_id?: number) => Promise<void>;
     addCard: (newCard: CardMarketCard, quantity?: number, quantity_foil?: number) => Promise<number | null>;
     updateCardQuantity: (cardMarketId: number, quantity: number) => Promise<void>;
     fetchCollection: (tcg_id?: number) => Promise<void>;
@@ -30,6 +33,7 @@ export default CardContext;
 
 export const CardProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [cardData, setCardData] = useState<CollectionItem[]>([]);
+    const [allCards, setAllCards] = useState<CollectionItem[]>([]);
     const [tcgName, setTcgName] = useState<string>('dragon ball fusion world');
     const { session } = useSession();
 
@@ -52,6 +56,12 @@ export const CardProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (error) {
             console.error('Error fetching collection:', error);
         }
+    };
+
+    // Fetch all cards for tcg
+    const fetchAllCardsForTcg = async () => {
+        const cards = await fetchCardsWithPrices(tcgName);
+        setAllCards(cards);
     };
 
     // Add a card to the backend collection
@@ -154,11 +164,12 @@ export const CardProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         if (session) {
             fetchCollection();
+            fetchAllCardsForTcg();
         }
     }, [session]);
 
     return (
-        <CardContext.Provider value={{ cardCollectionData: cardData, addCard, updateCardQuantity, fetchCollection, removeCard, tcgName, setTcgName }}>
+        <CardContext.Provider value={{ cardCollectionData: cardData, addCard, updateCardQuantity, fetchCollection, removeCard, tcgName, setTcgName, allCards, fetchAllCardsForTcg }}>
             {children}
         </CardContext.Provider>
     );

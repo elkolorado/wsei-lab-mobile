@@ -17,10 +17,11 @@ type Props = {
     bgColor: string;
     textColor: string;
     borderColor: string;
+    style?: object;
 };
 
-const Badge: React.FC<Props> = ({ label, bgColor, textColor, borderColor }) => (
-        <View style={[styles.badgeBase, { backgroundColor: bgColor, borderColor: borderColor }]}>
+const Badge: React.FC<Props> = ({ label, bgColor, textColor, borderColor, style }) => (
+        <View style={[styles.badgeBase, { backgroundColor: bgColor, borderColor: borderColor }, style]}>
             <Text style={{ color: textColor, fontSize: 14 }}>{label}</Text>
         </View>
     );

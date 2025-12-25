@@ -1,14 +1,13 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput,  TouchableOpacity, StyleSheet, FlatList, useWindowDimensions, Platform } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, useWindowDimensions, Platform } from 'react-native';
 import CardItem from '@/components/CardItem';
 
 import { useCardContext, CollectionItem } from '../context/CardContext';
 import { useSession } from '@/hooks/useAuth';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/constants/themeColors';
-import { fetchCardsWithPrices } from '@/actions/cardsApi';
 import { ActivityIndicator } from 'react-native';
-import { FontAwesome6 } from '@expo/vector-icons';
+import { FontAwesome6, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Linking } from 'react-native';
 import { Redirect } from 'expo-router';
 
@@ -48,226 +47,221 @@ const WindowGrid: React.FC<{ data: any[]; renderCard: (item: any) => React.React
 
 const Collection: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
-
-    const [filterMode, setFilterMode] = useState<'all' | 'owned' | 'unowned'>('all');
-    const [unownedCards, setUnownedCards] = useState<CollectionItem[]>([]);
-    const [loadingUnowned, setLoadingUnowned] = useState(false);
+    const [filterMode, setFilterMode] = useState<'all' | 'owned' | 'unowned'>('owned');
     const [sortBy, setSortBy] = useState<'price' | 'availability' | 'name' | 'priceTrend' | 'dateAdded'>('price');
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-    const { cardCollectionData, tcgName } = useCardContext();
+
+    const [showFilters, setShowFilters] = useState(false);
+    const [showSorts, setShowSorts] = useState(false);
+
     const { session } = useSession();
+    const { cardCollectionData, allCards } = useCardContext();
     const insets = useSafeAreaInsets();
 
-    if (!session) {
-        return <Redirect href="/login" />;
-    }
-    // Build base list depending on filter mode, then apply search/owned filters (when applicable) and sorting
-    let baseList: CollectionItem[] = filterMode === 'unowned' ? unownedCards.slice() : cardCollectionData.slice();
+    const SORT_LABELS: Record<string, string> = {
+        price: 'Price',
+        priceTrend: 'Trend',
+        name: 'Name',
+        dateAdded: 'Date',
+    };
 
-    // Apply search and owned filter for collection lists; for unowned also apply search
-    const q = (searchQuery || '').trim().toLowerCase();
-    if (q) {
-        baseList = baseList.filter((c: any) => ((c.card_name || c.name || '') as string).toLowerCase().includes(q));
-    }
-    if (filterMode === 'owned') {
-        baseList = baseList.filter((c: any) => (c.quantity ?? 0) > 0);
-    }
+    // 1. Memoize Unowned Cards calculation
+    const unownedCards = useMemo(() => {
+        const ownedIds = new Set(cardCollectionData.map(cc => cc.cardMarketId));
+        return allCards.filter(ac => !ownedIds.has(ac.cardMarketId));
+    }, [allCards, cardCollectionData]);
 
-    // Sorting
-    const dir = sortDir === 'asc' ? 1 : -1;
-    if (sortBy === 'price') {
-        baseList.sort((a: CollectionItem, b: CollectionItem) => dir * (Number(a.from_price ?? 0) - Number(b.from_price ?? 0)));
-    } else if (sortBy === 'priceTrend') {
-        baseList.sort((a: CollectionItem, b: CollectionItem) => {
-            const extractTrend = (card: CollectionItem) => {
-                const trend = card?.price_trend ? card.price_trend : (!card?.avg && !card?.avg_1d) ? card.trend_foil : null;
-                const n = Number(trend ?? 0);
-                return Number.isFinite(n) ? n : 0;
-            };
-            return dir * (extractTrend(a) - extractTrend(b));
-        });
-    } else if (sortBy === 'availability') {
-        baseList.sort((a: CollectionItem, b: CollectionItem) => dir * (Number(a.available ?? a.available_foil ?? 0) - Number(b.available ?? b.available_foil ?? 0)));
+    const unownedAndOwnedCards = useMemo(() => {
+        return [...unownedCards, ...cardCollectionData];
+    }, [unownedCards, cardCollectionData]);
 
-    }
-    else if (sortBy === 'name') {
-        baseList.sort((a: CollectionItem, b: CollectionItem) => dir * String(a.name || '').localeCompare(String(b.name || '')));
-    } else if (sortBy === 'dateAdded') {
-        baseList.sort((a: CollectionItem, b: CollectionItem) => {
-            const dateA = new Date(a.collection_last_updated || 0).getTime();
-            const dateB = new Date(b.collection_last_updated || 0).getTime();
-            return dir * (dateA - dateB);
-        });
-    }
-    const filteredCards = baseList;
+    // 2. Memoize the Filtered and Sorted list
+    // This will NOT re-run when showFilters or showSorts changes
+    const memoizedCards = useMemo(() => {
+        let list: CollectionItem[] = filterMode === 'unowned' ? unownedCards : cardCollectionData;
+        if (filterMode === 'all') {
+            list = unownedAndOwnedCards;
+        }
 
-    const totalFromPrice = filteredCards.reduce((sum, card) => sum + (card.from_price ?? 0) * (card.quantity ?? 0), 0);
-    const totalFromPriceFoil = filteredCards.reduce((sum, card) => sum + (card.low_foil ?? 0) * (card.quantity_foil ?? 0), 0);
-    const totalValue = totalFromPrice + totalFromPriceFoil;
-    const totalCards = filteredCards.reduce((sum, card) => sum + (card.quantity ?? 0) + (card.quantity_foil ?? 0), 0);
+        // Search Filter
+        const q = searchQuery.trim().toLowerCase();
+        if (q) {
+            list = list.filter((c: any) =>
+                ((c.card_name || c.name || '') as string).toLowerCase().includes(q)
+            );
+        }
 
+        // Owned Filter
+        if (filterMode === 'owned') {
+            list = list.filter((c: any) => (c.quantity ?? 0) > 0);
+        }
 
-    const totalTrendPrice = filteredCards.reduce((sum, card) => sum + ((card.price_trend ? card.price_trend : (!card.avg && !card.avg_1d) ? card.trend_foil : 0) ?? 0) * (card.quantity ?? 0), 0);
-
-    const totalTrendValue = totalTrendPrice;
-
-
-
-
-    // Fetch unowned cards list when user toggles to Unowned
-    React.useEffect(() => {
-        let mounted = true;
-        const loadUnowned = async () => {
-            if (filterMode !== 'unowned') return;
-            setLoadingUnowned(true);
-            try {
-                const tcg = tcgName || 'dragon ball fusion world';
-                const cardsResult = await fetchCardsWithPrices(tcg);
-                if (!mounted) return;
-                const cardsArray = Array.isArray(cardsResult) ? cardsResult : (cardsResult && cardsResult.cards) ? cardsResult.cards : [];
-                // exclude cards that appear in user's collection (match by cardMarketId or id/card_id)
-                const ownedMarketIds = new Set(cardCollectionData.map((c) => c.cardMarketId).filter(Boolean));
-                const ownedIds = new Set(cardCollectionData.map((c) => c.card_id).filter(Boolean));
-                const unowned = cardsArray.filter((c: any) => {
-                    if (c.cardMarketId != null && ownedMarketIds.has(c.cardMarketId)) return false;
-                    if (c.id != null && ownedIds.has(c.id)) return false;
-                    return true;
-                });
-                setUnownedCards(unowned);
-            } catch (err) {
-                console.error('Failed to load unowned cards', err);
-            } finally {
-                if (mounted) setLoadingUnowned(false);
+        // Sorting
+        const dir = sortDir === 'asc' ? 1 : -1;
+        list.sort((a, b) => {
+            if (sortBy === 'price') return dir * (Number(a.from_price ?? 0) - Number(b.from_price ?? 0));
+            if (sortBy === 'name') return dir * String(a.name || '').localeCompare(String(b.name || ''));
+            if (sortBy === 'dateAdded') {
+                return dir * (new Date(a.collection_last_updated || 0).getTime() - new Date(b.collection_last_updated || 0).getTime());
             }
-        };
-        loadUnowned();
-        return () => { mounted = false };
-    }, [filterMode, cardCollectionData, tcgName]);
+            if (sortBy === 'priceTrend') {
+                const aTrend = Number(a.price_trend ? a.price_trend : (!a.avg && !a.avg_1d) ? a.trend_foil : 0);
+                const bTrend = Number(b.price_trend ? b.price_trend : (!b.avg && !b.avg_1d) ? b.trend_foil : 0);
+                return dir * (aTrend - bTrend);
+            }
+            return 0;
+        });
 
+        return list;
+    }, [filterMode, searchQuery, sortBy, sortDir, unownedCards, cardCollectionData]);
+
+    // 3. Memoize Stats
+    const { totalValue, totalCards, totalTrendValue } = useMemo(() => {
+
+
+        const totalFromPrice = memoizedCards.reduce((sum, card) => sum + (card.from_price ?? 0) * (card.quantity ?? 0), 0);
+        const totalFromPriceFoil = memoizedCards.reduce((sum, card) => sum + (card.low_foil ?? 0) * (card.quantity_foil ?? 0), 0);
+        const totalValue = totalFromPrice + totalFromPriceFoil;
+        const totalCards = memoizedCards.reduce((sum, card) => sum + (card.quantity ?? 0) + (card.quantity_foil ?? 0), 0);
+        const totalTrendPrice = memoizedCards.reduce((sum, card) => sum + ((card.price_trend ? card.price_trend : (!card.avg && !card.avg_1d) ? card.trend_foil : 0) ?? 0) * (card.quantity ?? 0), 0);
+
+        const totalTrendValue = totalTrendPrice;
+        return {
+            totalValue: totalValue,
+            totalCards: totalCards,
+            totalTrendValue: totalTrendValue
+
+        };
+    }, [memoizedCards]);
+
+
+
+
+    const handleSortPress = (id: string) => {
+        if (sortBy === id) {
+            setSortDir(prev => (prev === 'asc' ? 'desc' : 'asc'));
+        } else {
+            setSortBy(id as any);
+            setSortDir('desc');
+        }
+        setShowSorts(false);
+    };
+
+    if (!session) return <Redirect href="/login" />;
 
     return (
         <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-            <View style={{ maxWidth: 1536, marginInline: 'auto', flex: 1, width: '100%' }}>
-
-                {/* My collection 2 cards (dot) $77.98 total value */}
-
-
-                {/* Filters bar - search */}
-                <View style={styles.filters}>
-
-
-
-
-                    <View style={styles.toggleRow}>
+            <View style={styles.contentWrapper}>
+                <View style={styles.headerControls}>
+                    <View style={styles.searchWrapper}>
+                        <FontAwesome6 name="magnifying-glass" size={14} color={colors.mutedForeground} style={styles.searchIcon} />
                         <TextInput
-                            style={{ outline: 'none', color: colors.foreground, borderColor: colors.border, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, height: 48, backgroundColor: 'rgba(255,255,255,0.05)' }}
-                            placeholder="Search cards by name"
+                            style={styles.searchInput}
+                            placeholder="Search cards..."
                             value={searchQuery}
                             onChangeText={setSearchQuery}
-                            selectionColor={colors.primary}
-                            placeholderTextColor={colors.colorForeground}
+                            placeholderTextColor={colors.mutedForeground}
                         />
-
-                        <TouchableOpacity style={[styles.toggleButton, filterMode === 'all' && styles.toggleActive]} onPress={() => setFilterMode('all')}>
-                            <Text style={filterMode === 'all' ? styles.toggleTextActive : styles.toggleText}>All</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.toggleButton, filterMode === 'owned' && styles.toggleActive]} onPress={() => setFilterMode('owned')}>
-                            <Text style={filterMode === 'owned' ? styles.toggleTextActive : styles.toggleText}>Owned</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.toggleButton, filterMode === 'unowned' && styles.toggleActive]} onPress={() => setFilterMode('unowned')}>
-                            <Text style={filterMode === 'unowned' ? styles.toggleTextActive : styles.toggleText}>Unowned</Text>
-                        </TouchableOpacity>
                     </View>
 
-                    <View style={styles.sortButtons}>
+                    <View style={styles.buttonGroup}>
                         <TouchableOpacity
-                            onPress={() => {
-                                if (sortBy === 'price') setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-                                else {
-                                    setSortBy('price');
-                                    setSortDir('desc');
-                                }
-                            }}
-                            style={[styles.sortButton, sortBy === 'price' && styles.sortActive]}
+                            style={[
+                                styles.actionButton,
+                                showFilters && styles.buttonOpen,
+                                !showFilters && styles.buttonHasActiveState
+                            ]}
+                            onPress={() => { setShowFilters(!showFilters); setShowSorts(false); }}
                         >
-                            <Text style={sortBy === 'price' ? styles.sortTextActive : styles.sortText}>From Price {sortBy === 'price' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</Text>
+                            <View style={{ position: 'relative' }}>
+                                <MaterialCommunityIcons
+                                    name="filter-variant"
+                                    size={18}
+                                    color={showFilters ? "#000" : colors.foreground}
+                                />
+                            </View>
+                            <Text style={[styles.actionButtonText, showFilters && styles.textActive]}>
+                                {filterMode.charAt(0).toUpperCase() + filterMode.slice(1)}
+                            </Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                            onPress={() => {
-                                if (sortBy === 'priceTrend') setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-                                else {
-                                    setSortBy('priceTrend');
-                                    setSortDir('desc');
-                                }
-                            }}
-                            style={[styles.sortButton, sortBy === 'priceTrend' && styles.sortActive]}
+                            style={[
+                                styles.actionButton,
+                                showSorts && styles.buttonOpen,
+                                !showSorts && styles.buttonHasActiveState
+                            ]}
+                            onPress={() => { setShowSorts(!showSorts); setShowFilters(false); }}
                         >
-                            <Text style={sortBy === 'priceTrend' ? styles.sortTextActive : styles.sortText}>Price Trend {sortBy === 'priceTrend' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</Text>
+                            <View style={{ position: 'relative' }}>
+                                <MaterialCommunityIcons
+                                    name="sort-variant"
+                                    size={18}
+                                    color={showSorts ? "#000" : colors.foreground}
+                                />
+                            </View>
+                            <Text style={[styles.actionButtonText, showSorts && styles.textActive]}>
+                                {SORT_LABELS[sortBy]} {!showSorts && (sortDir === 'asc' ? '↑' : '↓')}
+                            </Text>
                         </TouchableOpacity>
-
-                        <TouchableOpacity
-                            onPress={() => {
-                                if (sortBy === 'name') setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-                                else {
-                                    setSortBy('name');
-                                    setSortDir('asc');
-                                }
-                            }}
-                            style={[styles.sortButton, sortBy === 'name' && styles.sortActive]}
-                        >
-                            <Text style={sortBy === 'name' ? styles.sortTextActive : styles.sortText}>Name {sortBy === 'name' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            onPress={() => {
-                                if (sortBy === 'dateAdded') setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-                                else {
-                                    setSortBy('dateAdded');
-                                    setSortDir('desc');
-                                }
-                            }}
-                            style={[styles.sortButton, sortBy === 'dateAdded' && styles.sortActive]}
-                        >
-                            <Text style={sortBy === 'dateAdded' ? styles.sortTextActive : styles.sortText}>Date Added {sortBy === 'dateAdded' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    <View style={{ marginTop: 4 }}>
-                        <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 12 }}>
-                            {totalCards} cards · <Text style={{ color: colors.primary }}>{totalValue.toFixed(2)}€</Text> <Text style={{ color: colors.primary }}><FontAwesome6 name="arrow-trend-up" size={14} /> {totalTrendValue ? `${Number(totalTrendValue).toFixed(2)}€` : ''}</Text></Text>
                     </View>
                 </View>
 
-
-
-
-
-                {/* Card Gallery — responsive grid using same layout as cards.tsx */}
-                {filterMode === 'unowned' && loadingUnowned ? (
-                    <ActivityIndicator style={{ marginTop: 40 }} />
-                ) : (
-                    <WindowGrid
-                        data={filteredCards}
-                        renderCard={(item: any) => (
-                            <CardItem
-                                card={item}
-                                showCollection={true}
-                                dimmed={filterMode === 'unowned'}
-                                onPress={(c: any) => {
-                                    const url = c?.card_url || c?.cardUrl || c?.card_url;
-                                    if (url) {
-                                        Linking.openURL(String(url)).catch((err) => console.warn('Failed to open url', err));
-                                    } else {
-                                        console.log('No card_url for', c);
-                                    }
-                                }}
-                            />
-                        )}
-                    />
+                {/* Dropdowns... (same as before) */}
+                {showFilters && (
+                    <View style={styles.dropdownMenu}>
+                        <Text style={styles.menuLabel}>Show Cards:</Text>
+                        <View style={styles.optionRow}>
+                            {['all', 'owned', 'unowned'].map((mode) => (
+                                <TouchableOpacity
+                                    key={mode}
+                                    style={[styles.menuOption, filterMode === mode && styles.menuOptionActive]}
+                                    onPress={() => { setFilterMode(mode as any); setShowFilters(false); }}
+                                >
+                                    <Text style={[styles.optionText, filterMode === mode && styles.textActive]}>
+                                        {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
                 )}
 
+                {showSorts && (
+                    <View style={styles.dropdownMenu}>
+                        <Text style={styles.menuLabel}>Sort By:</Text>
+                        <View style={styles.sortGrid}>
+                            {Object.entries(SORT_LABELS).map(([id, label]) => (
+                                <TouchableOpacity
+                                    key={id}
+                                    style={[styles.menuOption, sortBy === id && styles.menuOptionActive]}
+                                    onPress={() => handleSortPress(id)}
+                                >
+                                    <Text style={[styles.optionText, sortBy === id && styles.textActive]}>
+                                        {label} {sortBy === id ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
+                )}
 
+                <View style={styles.statsBar}>
+                    <Text style={{ color: colors.mutedForeground, fontSize: 14, marginBottom: 12 }}>
+                        {totalCards} cards · <Text style={{ color: colors.primary }}>{totalValue.toFixed(2)}€</Text> <Text style={{ color: colors.primary }}><FontAwesome6 name="arrow-trend-up" size={14} /> {totalTrendValue ? `${Number(totalTrendValue).toFixed(2)}€` : ''}</Text></Text>
+                </View>
 
+                <WindowGrid
+                    data={memoizedCards}
+                    renderCard={(item) => (
+                        <CardItem
+                            card={item}
+                            showCollection={true}
+                            dimmed={filterMode === 'unowned' || (item.quantity ?? 0) === 0}
+                            onPress={(c) => Linking.openURL(c?.card_url).catch(() => { })}
+                        />
+                    )}
+                />
             </View>
         </View>
     );
@@ -275,135 +269,106 @@ const Collection: React.FC = () => {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    filters: {
-        paddingHorizontal: 16,
+    contentWrapper: { maxWidth: 1536, marginHorizontal: 'auto', flex: 1, width: '100%' },
+    headerControls: {
+        padding: 16,
+        flexDirection: 'row',
         gap: 12,
+        alignItems: 'center',
+        zIndex: 10,
     },
-    searchContainer: {
+    searchWrapper: {
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: 'rgba(255,255,255,0.05)',
         borderRadius: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
-        paddingHorizontal: 12,
-    },
-    search: {
-        height: 48,
-        color: colors.foreground,
-        fontSize: 16,
-        borderRadius: 12,
-        backgroundColor: 'rgba(255,255,255,0.05)',
         borderWidth: 1,
         borderColor: colors.border,
         paddingHorizontal: 12,
+        height: 44,
+    },
+    searchIcon: { marginRight: 8 },
+    searchInput: {
+        flex: 1,
+        color: colors.foreground,
+        fontSize: 14,
         ...Platform.select({ web: { outlineStyle: 'none' } }),
     },
-    tabs: {
+    buttonGroup: { flexDirection: 'row', gap: 8 },
+    actionButton: {
         flexDirection: 'row',
-        marginBottom: 10,
-    },
-    tab: {
-        flex: 1,
-        padding: 10,
         alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 5,
-        marginHorizontal: 5,
-    },
-    activeTab: {
-        backgroundColor: '#007bff',
-        borderColor: '#007bff',
-    },
-    tabText: {
-        color: '#fff',
-    },
-    toggleRow: {
-        flexDirection: 'row',
-        gap: 8,
-        alignItems: 'center',
-    },
-    toggleButton: {
-        paddingVertical: 8,
+        backgroundColor: 'rgba(255,255,255,0.05)',
         paddingHorizontal: 12,
-        borderRadius: 8,
+        height: 44,
+        borderRadius: 12,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
-        backgroundColor: 'rgba(255,255,255,0.03)'
+        borderColor: colors.border,
+        gap: 6,
     },
-    toggleActive: {
-        backgroundColor: colors.primary,
-        borderColor: colors.primary,
+    buttonActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+    actionButtonText: { color: colors.foreground, fontSize: 14, fontWeight: '600' },
+    textActive: { color: '#000' },
+
+    // Dropdown Styles
+    dropdownMenu: {
+        marginHorizontal: 16,
+        marginBottom: 12,
+        padding: 16,
+        backgroundColor: 'rgba(255,255,255,0.03)',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: colors.border,
     },
-    toggleText: { color: colors.foreground, fontSize: 13, fontWeight: '600' },
-    toggleTextActive: { color: '#000', fontWeight: '700' },
-    sortButtons: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-        marginTop: 8
-    },
-    sortButton: {
+    menuLabel: { color: colors.mutedForeground, fontSize: 12, marginBottom: 12, fontWeight: '700', textTransform: 'uppercase' },
+    optionRow: { flexDirection: 'row', gap: 8 },
+    sortGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    menuOption: {
         paddingVertical: 8,
-        paddingHorizontal: 14,
+        paddingHorizontal: 16,
         borderRadius: 8,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.1)',
-        backgroundColor: 'rgba(255,255,255,0.03)'
+        backgroundColor: 'rgba(255,255,255,0.05)',
     },
-    sortActive: {
+    menuOptionActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+    optionText: { color: colors.foreground, fontSize: 13, fontWeight: '600' },
+
+    statsBar: { paddingHorizontal: 16, marginBottom: 8 },
+    statsText: { color: colors.mutedForeground, fontSize: 13 },
+    actionButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        paddingHorizontal: 12,
+        height: 44,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        gap: 8,
+        position: 'relative', // Necessary for absolute positioning of dot
+    },
+    buttonOpen: {
         backgroundColor: colors.primary,
         borderColor: colors.primary
     },
-    sortText: { color: colors.foreground, fontSize: 13, fontWeight: '600' },
-    sortTextActive: { color: '#000', fontWeight: '700' },
-    card: {
-        flex: 1,
-        margin: 5,
-        padding: 10,
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 5,
-        alignItems: 'center',
+    buttonHasActiveState: {
+        borderColor: colors.primary, // Highlight border to show something is active
+        backgroundColor: 'rgba(59, 130, 246, 0.1)', // Very subtle tint
     },
-    cardImage: {
-        width: 150,
-        height: 210,
-        marginBottom: 10,
-    },
-    cardName: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        marginBottom: 5,
-    },
-    cardQuantity: {
-        fontSize: 14,
-        color: '#555',
-    },
-    modalContainer: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    modalCloseButton: {
+    indicatorDot: {
         position: 'absolute',
-        top: 40,
-        right: 20,
-        padding: 10,
-        backgroundColor: '#fff',
-        borderRadius: 5,
+        top: -2,
+        right: -2,
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: colors.primary,
+        borderWidth: 1,
+        borderColor: colors.background, // Creates a small gap so it stands out
     },
-    modalCloseText: {
-        color: '#000',
-        fontWeight: 'bold',
-    },
-    fullscreenImage: {
-        width: '90%',
-        height: '80%',
-        resizeMode: 'contain',
-    },
+
 });
 
 export default Collection;

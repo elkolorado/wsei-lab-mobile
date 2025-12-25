@@ -103,7 +103,7 @@ export default function App() {
     <View style={[
       styles.container, { paddingBottom: insets.bottom }// Apply row layout on web/large screens
     ]}>
-      <View style={[{ flex: 1, paddingBottom: 16 },
+      <View style={[{ flex: 1 },
       Platform.OS === 'web' && styles.desktopContainer]}>
 
         <View style={[styles.cameraContainer, Platform.OS === 'web' ? styles.column : { flex: 1.4 },]}>
@@ -121,12 +121,14 @@ export default function App() {
             />
           )}
         </View>
+        {results.length > 0 && (
         <ScannedCards results={results} removeResult={removeResult} style={[Platform.OS === 'web' ? styles.column : {
           width: '100%',
           // height: 300,
           flex: 1.3,
-          paddingTop: 16
+          paddingTop: 8
         }]} />
+        )}
       </View>
 
     </View>

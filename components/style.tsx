@@ -26,7 +26,7 @@ export default function style() {
       justifyContent: 'center',
       backgroundColor: colors.colorBackground,
       paddingHorizontal: 16,
-      paddingTop: 16
+      // paddingTop: 16
     },
     desktopContainer: {
       flexDirection: 'row',
@@ -36,6 +36,7 @@ export default function style() {
       width: "100%",
       height: '100%', // Wypełnij rodzica
       backgroundColor: colors.colorBackground,
+      paddingBottom: 16
     },
     column: {
       flex: 3, // Daj obu kolumnom równe szanse (lub np. 2 dla kamery, 1 dla listy)
@@ -45,7 +46,7 @@ export default function style() {
     },
     scannedCardsContainer: {
       flex: 1, // Pozwól temu kontenerowi rosnąć i wypełniać kolumnę
-      marginTop: 12,
+      marginTop: 8,
       // paddingBottom: 16,
       width: "100%",
       // Usuwamy na chwilę maxHeight na webie, bo flex: 1 załatwi sprawę

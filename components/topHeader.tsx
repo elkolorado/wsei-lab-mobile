@@ -41,7 +41,7 @@ const TopHeader: React.FC<Props> = ({ navigation, route, options }) => {
                             <Text style={styles.subtitle}>Scan & Collect</Text>
                         </View>
                         <View style={styles.tcgRow}>
-                            <PrimaryButton textStyle={{fontSize: 10}} onPress={() => setTcgName(tcgName == 'Riftbound' ? 'dragon ball fusion world' : 'Riftbound')} title={tcgName ? tcgName.toUpperCase() : 'Select TCG'} />
+                            <PrimaryButton textStyle={{fontSize: 10, color: colors.foreground}} style={{backgroundColor: 'transparent', borderColor: colors.primary, borderWidth: 1}} onPress={() => setTcgName(tcgName == 'Riftbound' ? 'dragon ball fusion world' : 'Riftbound')} title={tcgName ? tcgName.toUpperCase() : 'Select TCG'} />
                         </View>
                     </View>
 
@@ -77,7 +77,7 @@ const TopHeader: React.FC<Props> = ({ navigation, route, options }) => {
                                         <Ionicons
                                             name={item.icon as any}
                                             size={16}
-                                            color={isActive ? colors.card : colors.foreground}
+                                            color={isActive ? colors.card : colors.mutedForeground}
                                             style={{ marginRight: 8 }}
                                         />
                                         <Text style={[styles.pillText, isActive && styles.pillTextActive]}>
@@ -104,6 +104,7 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: colors.border,
         backgroundColor: colors.card,
+        // display: 'none'
 
 
     },
@@ -124,7 +125,7 @@ const styles = StyleSheet.create({
         maxWidth: 1536,
         marginInline: "auto",
         width: "100%",
-        paddingVertical: 20,
+        // paddingVertical: 10,
     },
     brandRow: { flexDirection: "row", alignItems: "center" },
     logo: {
@@ -168,33 +169,35 @@ const styles = StyleSheet.create({
     userInitials: { fontSize: 12 },
     logoutBtn: {
         paddingHorizontal: 12,
-        paddingVertical: 8,
+        paddingVertical: 6,
         borderRadius: 8,
-        borderWidth: 1,
-        borderColor: colors.primary,
+        borderWidth: 0,
+        borderColor: colors.foreground,
         backgroundColor: colors.card,
     },/* Navigation Pills Row */
     navRow: {
         flexDirection: "row",
         gap: 12,
-        marginTop: 4,
+        // marginTop: 4,
+        paddingVertical: 10,
     },
     pill: {
         flexDirection: "row",
         alignItems: "center",
-        paddingHorizontal: 16,
-        paddingVertical: 10,
+        paddingHorizontal: 10,
+        paddingVertical: 8,
         borderRadius: 8,
-        backgroundColor: "rgba(255,255,255,0.03)",
-        borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.1)",
+        // backgroundColor: "rgba(255,255,255,0.03)",
+        // borderColor: "rgba(255,255,255,0.1)",
     },
     pillActive: {
+        borderWidth: 1,
+
         backgroundColor: colors.primary,
         borderColor: colors.primary,
     },
     pillText: {
-        color: "#fff",
+        color: colors.mutedForeground,
         fontSize: 14,
         fontWeight: "600",
     },

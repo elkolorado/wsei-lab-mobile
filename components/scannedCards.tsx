@@ -65,27 +65,26 @@ const ScannedCards: React.FC<Props> = ({ results, style, removeResult }) => {
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
             <View style={style}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <Text style={{ fontSize: 16, color: colors.primary }}>Scanned Cards</Text>
-                        <Badge label={results.length.toString()} bgColor="" textColor={colors.primary} borderColor={colors.primary} />
+                        <Badge style={{ borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, borderColor: '#d4af3766', fontSize: 12, }} label={results.length.toString()} bgColor="" textColor={colors.primary} borderColor={colors.primary} />
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                         {/* sum the from_price or price of all scanned cards */}
                         <Text style={{ fontSize: 14, color: colors.foreground }}>Total:</Text>
-                        <Text style={{ fontSize: 14, color: colors.foreground }}>$
+                        <Text style={{ fontSize: 14, color: colors.foreground }}>
                             {results.reduce((total, card) => {
                                 const price = parseFloat(card.cardInfo.from_price || '0');
                                 return total + (isNaN(price) ? 0 : price);
-                            }, 0).toFixed(2)}
+                            }, 0).toFixed(2)}€
                         </Text>
-                        <Text style={{ fontSize: 14, color: colors.foreground }}> | </Text>
-                        <Text style={{ fontSize: 14, color: colors.foreground }}><FontAwesome6 name="arrow-trend-up" size={14} /> $
-                            {results.reduce((total, card) => {
-                                const price = parseFloat(card.cardInfo.price_trend || '0');
-                                return total + (isNaN(price) ? 0 : price);
-                            }, 0).toFixed(2)}
-                        </Text>
+                        <FontAwesome6 name="arrow-trend-up" size={14} color={colors.foreground} />
+                        <Text style={{ fontSize: 14, color: colors.foreground }}>{results.reduce((total, card) => {
+                            const price = parseFloat(card.cardInfo?.price_trend ? card.cardInfo.price_trend : (!card.cardInfo?.avg && !card.cardInfo?.avg_1d) ? card.cardInfo?.trend_foil : null || '0');
+                            return total + (isNaN(price) ? 0 : price);
+                        }, 0).toFixed(2)}€</Text>
+
                     </View>
                 </View>
 
