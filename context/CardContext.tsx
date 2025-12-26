@@ -166,7 +166,7 @@ export const CardProvider: React.FC<{ children: React.ReactNode }> = ({ children
             fetchCollection();
             fetchAllCardsForTcg();
         }
-    }, [session]);
+    }, [session, tcgName]);
 
     return (
         <CardContext.Provider value={{ cardCollectionData: cardData, addCard, updateCardQuantity, fetchCollection, removeCard, tcgName, setTcgName, allCards, fetchAllCardsForTcg }}>

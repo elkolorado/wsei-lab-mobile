@@ -1,8 +1,7 @@
 import React, { useRef } from 'react';
-import { Platform, ScrollView, Text, View, TouchableOpacity, StyleSheet } from "react-native";
+import { ScrollView, Text, View, TouchableOpacity } from "react-native";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Reanimated, { useAnimatedStyle, interpolate } from 'react-native-reanimated';
-import FoundCardDetails from "./foundCardDetails";
 import Badge from "./badge";
 import { colors } from "@/constants/themeColors";
 import style from './style';

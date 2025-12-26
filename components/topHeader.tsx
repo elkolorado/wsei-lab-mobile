@@ -9,6 +9,7 @@ import { usePathname, useRouter } from "expo-router";
 import { Picker } from '@react-native-picker/picker';
 import { useCardContext } from "@/context/CardContext";
 import PrimaryButton from "./primaryButton";
+import TCGSelector from "./tcgSelector";
 type Props = {
     navigation?: any;
     route?: any;
@@ -40,9 +41,7 @@ const TopHeader: React.FC<Props> = ({ navigation, route, options }) => {
                             <Text style={styles.title}>TCG Scanner</Text>
                             <Text style={styles.subtitle}>Scan & Collect</Text>
                         </View>
-                        <View style={styles.tcgRow}>
-                            <PrimaryButton textStyle={{fontSize: 10, color: colors.foreground}} style={{backgroundColor: 'transparent', borderColor: colors.primary, borderWidth: 1}} onPress={() => setTcgName(tcgName == 'Riftbound' ? 'dragon ball fusion world' : 'Riftbound')} title={tcgName ? tcgName.toUpperCase() : 'Select TCG'} />
-                        </View>
+                        <TCGSelector />
                     </View>
 
                     <View style={styles.actionsRow}>
@@ -127,7 +126,11 @@ const styles = StyleSheet.create({
         width: "100%",
         // paddingVertical: 10,
     },
-    brandRow: { flexDirection: "row", alignItems: "center" },
+    brandRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        zIndex: 100, // Just a safety measure for the trigger
+    },
     logo: {
         width: 44,
         height: 44,

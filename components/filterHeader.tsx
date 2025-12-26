@@ -1,3 +1,4 @@
+// @/components/FilterHeader.tsx
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, ScrollView } from 'react-native';
 import { FontAwesome6, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -16,32 +17,29 @@ interface FilterHeaderProps {
   sortDir: 'asc' | 'desc';
   sortOptions: Record<string, string>;
   onSortPress: (id: string) => void;
-  // Primary Filter (e.g., Rarity or "Show Owned/Unowned")
+  // Primary Filter (Ownership/Status)
   filterMode: string;
   filterOptions: FilterOption[];
   onFilterPress: (id: string) => void;
-  filterLabel?: string;
-  // Secondary Filter (e.g., Expansions) - Optional
+  // Secondary Filter (Expansions/Sets)
   secondaryFilterMode?: string;
   secondaryFilterOptions?: FilterOption[];
   onSecondaryFilterPress?: (id: string) => void;
-  secondaryLabel?: string;
-  // Stats
+  // Metadata
   statsText?: string;
 }
 
 const FilterHeader: React.FC<FilterHeaderProps> = ({
   searchQuery, setSearchQuery,
   currentSort, sortDir, sortOptions, onSortPress,
-  filterMode, filterOptions, onFilterPress, filterLabel = "Filter",
-  secondaryFilterMode, secondaryFilterOptions, onSecondaryFilterPress, secondaryLabel = "Sets",
+  filterMode, filterOptions, onFilterPress,
+  secondaryFilterMode, secondaryFilterOptions, onSecondaryFilterPress,
   statsText
 }) => {
-  const [activeTab, setActiveTab] = useState<'filter' | 'secondary' | 'sort' | null>(null);
+  const [activeTab, setActiveTab] = useState<'filters' | 'sort' | null>(null);
 
-  const toggleTab = (tab: 'filter' | 'secondary' | 'sort') => {
-    setActiveTab(prev => prev === tab ? null : tab);
-  };
+  // Helper to check if any non-default filters are active
+  const hasActiveFilters = filterMode !== 'all' || (secondaryFilterMode && secondaryFilterMode !== 'All');
 
   return (
     <View style={styles.container}>
@@ -50,7 +48,7 @@ const FilterHeader: React.FC<FilterHeaderProps> = ({
           <FontAwesome6 name="magnifying-glass" size={14} color={colors.mutedForeground} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search..."
+            placeholder="Search cards..."
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholderTextColor={colors.mutedForeground}
@@ -58,34 +56,29 @@ const FilterHeader: React.FC<FilterHeaderProps> = ({
         </View>
 
         <View style={styles.buttonGroup}>
-          {/* Primary Filter */}
+          {/* Unified Filter Button */}
           <TouchableOpacity
-            style={[styles.actionButton, activeTab === 'filter' && styles.buttonOpen]}
-            onPress={() => toggleTab('filter')}
+            style={[
+              styles.actionButton, 
+              activeTab === 'filters' && styles.buttonOpen,
+              hasActiveFilters && !activeTab && styles.buttonActiveHighlight
+            ]}
+            onPress={() => setActiveTab(prev => prev === 'filters' ? null : 'filters')}
           >
-            <MaterialCommunityIcons name="filter-variant" size={18} color={activeTab === 'filter' ? "#000" : colors.foreground} />
-            <Text style={[styles.actionButtonText, activeTab === 'filter' && styles.textActive]}>
-              {filterOptions.find(o => o.id === filterMode)?.label || filterLabel}
+            <MaterialCommunityIcons 
+              name={hasActiveFilters ? "filter" : "filter-outline"} 
+              size={18} 
+              color={activeTab === 'filters' ? "#000" : colors.foreground} 
+            />
+            <Text style={[styles.actionButtonText, activeTab === 'filters' && styles.textActive]}>
+              Filters
             </Text>
           </TouchableOpacity>
-
-          {/* Secondary Filter (Expansions) */}
-          {secondaryFilterOptions && (
-            <TouchableOpacity
-              style={[styles.actionButton, activeTab === 'secondary' && styles.buttonOpen]}
-              onPress={() => toggleTab('secondary')}
-            >
-              <MaterialCommunityIcons name="layers-outline" size={18} color={activeTab === 'secondary' ? "#000" : colors.foreground} />
-              <Text style={[styles.actionButtonText, activeTab === 'secondary' && styles.textActive]} numberOfLines={1}>
-                {secondaryFilterOptions.find(o => o.id === secondaryFilterMode)?.label || secondaryLabel}
-              </Text>
-            </TouchableOpacity>
-          )}
 
           {/* Sort Button */}
           <TouchableOpacity
             style={[styles.actionButton, activeTab === 'sort' && styles.buttonOpen]}
-            onPress={() => toggleTab('sort')}
+            onPress={() => setActiveTab(prev => prev === 'sort' ? null : 'sort')}
           >
             <MaterialCommunityIcons name="sort-variant" size={18} color={activeTab === 'sort' ? "#000" : colors.foreground} />
             <Text style={[styles.actionButtonText, activeTab === 'sort' && styles.textActive]}>
@@ -95,39 +88,53 @@ const FilterHeader: React.FC<FilterHeaderProps> = ({
         </View>
       </View>
 
-      {/* Dropdown Menu */}
-      {activeTab && (
+      {/* Multi-Category Filter Dropdown */}
+      {activeTab === 'filters' && (
         <View style={styles.dropdownMenu}>
-          <Text style={styles.menuLabel}>
-            {activeTab === 'filter' ? filterLabel : activeTab === 'secondary' ? secondaryLabel : 'Sort By'}
-          </Text>
-          
+          {/* Category 1: Status (Owned/Missing) */}
+          <Text style={styles.menuLabel}>Card Status</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.optionRow}>
-            {activeTab === 'filter' && filterOptions.map(opt => (
+            {filterOptions.map(opt => (
               <TouchableOpacity
                 key={opt.id}
                 style={[styles.menuOption, filterMode === opt.id && styles.menuOptionActive]}
-                onPress={() => { onFilterPress(opt.id); setActiveTab(null); }}
+                onPress={() => onFilterPress(opt.id)}
               >
                 <Text style={[styles.optionText, filterMode === opt.id && styles.textActive]}>{opt.label}</Text>
               </TouchableOpacity>
             ))}
+          </ScrollView>
 
-            {activeTab === 'secondary' && secondaryFilterOptions?.map(opt => (
-              <TouchableOpacity
-                key={opt.id}
-                style={[styles.menuOption, secondaryFilterMode === opt.id && styles.menuOptionActive]}
-                onPress={() => { onSecondaryFilterPress?.(opt.id); setActiveTab(null); }}
-              >
-                <Text style={[styles.optionText, secondaryFilterMode === opt.id && styles.textActive]}>{opt.label}</Text>
-              </TouchableOpacity>
-            ))}
+          {/* Category 2: Sets (Expansions) */}
+          {secondaryFilterOptions && (
+            <>
+              <Text style={[styles.menuLabel, { marginTop: 16 }]}>Expansions</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.optionRow}>
+                {secondaryFilterOptions.map(opt => (
+                  <TouchableOpacity
+                    key={opt.id}
+                    style={[styles.menuOption, secondaryFilterMode === opt.id && styles.menuOptionActive]}
+                    onPress={() => onSecondaryFilterPress?.(opt.id)}
+                  >
+                    <Text style={[styles.optionText, secondaryFilterMode === opt.id && styles.textActive]}>{opt.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </>
+          )}
+        </View>
+      )}
 
-            {activeTab === 'sort' && Object.entries(sortOptions).map(([id, label]) => (
+      {/* Sort Dropdown */}
+      {activeTab === 'sort' && (
+        <View style={styles.dropdownMenu}>
+          <Text style={styles.menuLabel}>Sort Order</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.optionRow}>
+            {Object.entries(sortOptions).map(([id, label]) => (
               <TouchableOpacity
                 key={id}
                 style={[styles.menuOption, currentSort === id && styles.menuOptionActive]}
-                onPress={() => { onSortPress(id); if(currentSort !== id) setActiveTab(null); }}
+                onPress={() => onSortPress(id)}
               >
                 <Text style={[styles.optionText, currentSort === id && styles.textActive]}>
                   {label} {currentSort === id ? (sortDir === 'asc' ? '↑' : '↓') : ''}
@@ -163,14 +170,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, height: 44, borderRadius: 12, borderWidth: 1, borderColor: colors.border, gap: 6,
   },
   buttonOpen: { backgroundColor: colors.primary, borderColor: colors.primary },
-  actionButtonText: { color: colors.foreground, fontSize: 13, fontWeight: '600', maxWidth: 80 },
+  buttonActiveHighlight: { borderColor: colors.primary }, // Subtle hint when filters are active
+  actionButtonText: { color: colors.foreground, fontSize: 13, fontWeight: '600' },
   textActive: { color: '#000' },
   dropdownMenu: {
     marginHorizontal: 16, marginBottom: 12, padding: 16,
     backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 16,
     borderWidth: 1, borderColor: colors.border,
   },
-  menuLabel: { color: colors.mutedForeground, fontSize: 10, marginBottom: 12, fontWeight: '800', textTransform: 'uppercase' },
+  menuLabel: { color: colors.mutedForeground, fontSize: 10, marginBottom: 8, fontWeight: '800', textTransform: 'uppercase' },
   optionRow: { flexDirection: 'row', gap: 8 },
   menuOption: {
     paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8,
