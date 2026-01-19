@@ -5,17 +5,21 @@ import { useCardContext } from '@/context/CardContext';
 import { colors } from '@/constants/themeColors';
 
 const AVAILABLE_TCGS = [
-  { id: 'dragon ball fusion world', label: 'Fusion World', color: '#3b82f6' },
-  { id: 'riftbound', label: 'Riftbound', color: '#7c3aed' },
+  { id: 1,name: 'dragon ball fusion world', label: 'Fusion World', color: '#3b82f6' },
+  { id: 5,name: 'riftbound', label: 'Riftbound', color: '#7c3aed' },
+  { id: 3,name: 'one piece', label: 'One Piece', color: '#10b981' },
+  { id: 1006, name: 'pokemon', label: 'Pokemon', color: '#ef4444' },
+  { id: 4, name: "magic: the gathering", label: 'Magic', color: '#f59e0b' },
+  { id: 1007, name: 'digimon', label: 'Digimon', color: '#ec4899' },
 ];
 
 const TCGSelector = () => {
-  const { tcgName, setTcgName } = useCardContext();
+  const { tcgName, setTcgName, tcgId, setTcgId } = useCardContext();
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
   const triggerRef = useRef<View>(null);
 
-  const activeTcg = AVAILABLE_TCGS.find(t => t.id === tcgName) || AVAILABLE_TCGS[0];
+  const activeTcg = AVAILABLE_TCGS.find(t => t.id === tcgId) || AVAILABLE_TCGS[0];
 
   const openDropdown = () => {
     // Measure where the button is on the screen to place the modal correctly
@@ -50,16 +54,17 @@ const TCGSelector = () => {
             {AVAILABLE_TCGS.map((tcg) => (
               <TouchableOpacity
                 key={tcg.id}
-                style={[styles.option, tcg.id === tcgName && styles.optionSelected]}
+                style={[styles.option, tcg.id === tcgId && styles.optionSelected]}
                 onPress={() => {
-                  setTcgName(tcg.id);
+                  setTcgId(tcg.id);
+                  setTcgName(tcg.name);
                   setIsOpen(false);
                 }}
               >
-                <Text style={[styles.optionText, tcg.id === tcgName && { color: tcg.color }]}>
+                <Text style={[styles.optionText, tcg.id === tcgId && { color: tcg.color }]}>
                   {tcg.label}
                 </Text>
-                {tcg.id === tcgName && <MaterialCommunityIcons name="check" size={16} color={tcg.color} />}
+                {tcg.id === tcgId && <MaterialCommunityIcons name="check" size={16} color={tcg.color} />}
               </TouchableOpacity>
             ))}
           </View>

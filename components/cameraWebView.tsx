@@ -6,6 +6,7 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { colors } from '@/constants/themeColors';
 import PrimaryButton from './primaryButton';
 import { FontAwesome6 } from '@expo/vector-icons';
+import { useCardContext } from '@/context/CardContext';
 
 interface CameraWebViewProps {
   setResult: (result: string) => void;
@@ -23,15 +24,24 @@ const CameraWebView: React.FC<CameraWebViewProps> = ({ setResult, setCardName, s
   const streamRef = useRef<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null); // Use Ref instead of ID for better reliability
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { tcgName } = useCardContext();
+  const tcgNameRef = useRef(tcgName);
+
+  useEffect(() => {
+    tcgNameRef.current = tcgName;
+  }, [tcgName]);
 
   const uploadImage = async (blob: Blob, uri: string) => {
     setPhotoUri(uri);
     const formData = new FormData();
-    formData.append('file', blob, 'photo.png');
+    const extension = blob.type.split('/')[1] || 'png';
+    formData.append('file', blob, `upload.${extension}`);
+    // formData.append('file', blob, 'photo.png');
     try {
-      const response = await fetch(`${API_ENDPOINT}/matchCard`, { method: 'POST', body: formData });
+      const response = await fetch(`${API_ENDPOINT}/matchCard?tcg_name=${encodeURIComponent(tcgNameRef.current)}`, { method: 'POST', body: formData });
       const result = await response.text();
       try {
+        // setResult(result);
         const parsed = JSON.parse(result);
         setResult(JSON.stringify({ apiResult: parsed, raw: result, photoUri: uri }));
       } catch (e) {
@@ -43,52 +53,38 @@ const CameraWebView: React.FC<CameraWebViewProps> = ({ setResult, setCardName, s
   };
 
   useEffect(() => {
-    let mounted = true;
+    let stream = null;
 
     const startStream = async () => {
-      // 1. Clean up old stream
+      // Stop poprzedniego strumienia
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current.getTracks().forEach(t => t.stop());
       }
 
       try {
-        // 2. Request stream with fallback for browsers that don't like "ideal"
-        const constraints = {
-          video: { 
-            facingMode: facingMode,
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          }
-        };
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
+        });
 
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
-
-        if (!mounted) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
-        }
-
-        streamRef.current = stream;
-        
-        // 3. Assign to video ref
         if (videoRef.current) {
-          videoRef.current.srcObject = stream;
+          videoRef.current.srcObject = streamRef.current = stream;
           setIsCameraReady(true);
         }
 
-        // 4. Check for multiple cameras
         const devices = await navigator.mediaDevices.enumerateDevices();
-        const vids = devices.filter((d) => d.kind === 'videoinput');
-        setHasMultipleCameras(vids.length > 1);
-
+        setHasMultipleCameras(devices.filter(d => d.kind === 'videoinput').length > 1);
       } catch (err) {
-        console.error('CRITICAL: Camera Error:', err);
-        if (mounted) setIsCameraReady(false);
+        console.error('Camera Error:', err);
+        setIsCameraReady(false);
       }
     };
 
     startStream();
-    return () => { mounted = false; };
+
+    return () => {
+      stream?.getTracks().forEach(t => t.stop());
+      setIsCameraReady(false);
+    };
   }, [facingMode]);
 
   const handleTakePhoto = async () => {
@@ -110,62 +106,63 @@ const CameraWebView: React.FC<CameraWebViewProps> = ({ setResult, setCardName, s
       window.removeEventListener('paste', clipboardMatchWeb);
     };
   }, [setCardName, setPhotoUri, setResult]);
-  
 
-  const clipboardMatchWeb = async () => {
+
+
+const matchImage = async (blob: Blob) => {
+  const photoUri = URL.createObjectURL(blob);
+  setPhotoUri(photoUri);
+
+  const formData = new FormData();
+  formData.append('file', blob, 'clipboard.png');
+
+  try {
+    const query = new URLSearchParams({ tcg_name: tcgNameRef.current }).toString();
+    const response = await fetch(`${API_ENDPOINT}/matchCard?${query}`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    const raw = await response.text();
+    let apiResult = null;
+
     try {
-      // Try Async Clipboard API first
-      const cb = (navigator as any).clipboard;
-      if (cb && cb.read) {
-        const items: any[] = await cb.read();
-        for (const item of items) {
-          const imageType = (item.types || []).find((t: string) => t.startsWith('image/'));
-          if (imageType) {
-            const blob: Blob = await item.getType(imageType);
-            const photoUri = URL.createObjectURL(blob);
-            setPhotoUri(photoUri);
-
-            const formData = new FormData();
-            formData.append('file', blob, 'clipboard.png');
-            console.log('Sending clipboard image to server', formData);
-
-            try {
-              const response = await fetch(`${API_ENDPOINT}/matchCards`, {
-                method: 'POST',
-                body: formData,
-              });
-              const result = await response.text();
-              try {
-                setResult(result);
-                // const parsed = JSON.parse(result);
-                // const wrapped = JSON.stringify({ apiResult: parsed, raw: result, photoUri });
-                // setResult(wrapped);
-                // const cardName = parsed.best_match?.replace('.webp', '') || parsed.card_details?.cardMarketId;
-                // setCardName(cardName);
-              } catch (e) {
-                setResult(JSON.stringify({ apiResult: null, raw: result, photoUri }));
-              }
-            } catch (err) {
-              console.error('Error sending clipboard image to server:', err);
-            }
-
-            return;
-          }
-        }
-        console.error('No image found in clipboard items');
-        return;
-      }
-
-      // Fallback: rely on paste event (handled by window paste listener below)
-      console.error('Clipboard.read not supported in this browser');
-    } catch (err) {
-      console.error('Error reading clipboard: ', err);
+      apiResult = JSON.parse(raw);
+      const cardName = apiResult.best_match || apiResult.card_details.cardMarketId;
+      if (cardName) setCardName(cardName);
+    } catch (e) {
+      console.warn("API response is not JSON:", raw);
     }
-  };
+
+    // Spójna aktualizacja stanu wyników
+    setResult(JSON.stringify({ apiResult, raw, photoUri }));
+  } catch (err) {
+    console.error('Fetch error:', err);
+  }
+};
+
+const clipboardMatchWeb = async () => {
+  const cb = navigator.clipboard;
+  if (!cb?.read) {
+    console.error('Clipboard.read not supported');
+    return;
+  }
+  try {
+    const items = await cb.read();
+    const imageItem = items.find(item => item.types.some(t => t.startsWith('image/')));
+    if (imageItem) {
+      const type = imageItem.types.find(t => t.startsWith('image/'))!;
+      const blob = await imageItem.getType(type);
+      await matchImage(blob);
+    }
+  } catch (err) {
+    console.error('Failed to read clipboard:', err);
+  }
+};
 
   return (
-    <View style={[styles.container, { flex: 1, padding:0 , backgroundColor: colors.colorBackground || '#000' }]}>
-      
+    <View style={[styles.container, { flex: 1, padding: 0, backgroundColor: colors.colorBackground || '#000' }]}>
+
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
         {/* We keep the video element in the DOM but hidden if not ready to prevent race conditions */}
         <video
@@ -173,11 +170,11 @@ const CameraWebView: React.FC<CameraWebViewProps> = ({ setResult, setCardName, s
           autoPlay
           playsInline
           muted
-          style={{ 
-            display: isCameraReady ? 'block' : 'none', 
-            width: '100%', 
-            height: '100%', 
-            objectFit: 'cover' 
+          style={{
+            display: isCameraReady ? 'block' : 'none',
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover'
           }}
         />
 
@@ -207,9 +204,17 @@ const CameraWebView: React.FC<CameraWebViewProps> = ({ setResult, setCardName, s
       </View>
 
       <canvas id="canvas" style={{ display: 'none' }}></canvas>
-      <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={(e) => {
+      <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" multiple onChange={(e) => {
         const file = e.target.files?.[0];
-        if (file) uploadImage(file, URL.createObjectURL(file));
+        // if (file) uploadImage(file, URL.createObjectURL(file));
+        // multiple files support
+        if (file) {
+          const files = e.target.files;
+          for (let i = 0; i < files!.length; i++) {
+            const f = files![i];
+            uploadImage(f, URL.createObjectURL(f));
+          }
+        }
       }} />
 
       <View style={{
@@ -221,8 +226,8 @@ const CameraWebView: React.FC<CameraWebViewProps> = ({ setResult, setCardName, s
         gap: 20,
         alignItems: 'center',
       }}>
-        <PrimaryButton title="Upload" style={{backgroundColor: "transparent"}} textStyle={{color: colors.mutedForeground}} onPress={() => fileInputRef.current?.click()} icon={<FontAwesome6 name="images" size={24} color={colors.mutedForeground} />} />
-        
+        <PrimaryButton title="Upload" style={{ backgroundColor: "transparent" }} textStyle={{ color: colors.mutedForeground }} onPress={() => fileInputRef.current?.click()} icon={<FontAwesome6 name="images" size={24} color={colors.mutedForeground} />} />
+
         {isCameraReady && (
           // <button onClick={handleTakePhoto} style={buttonStyle('#007BFF', true)}>Take Photo</button>
           <PrimaryButton title="Scan" onPress={handleTakePhoto} icon={<FontAwesome6 name="camera" size={24} color={colors.primaryForeground} />} />
@@ -230,7 +235,7 @@ const CameraWebView: React.FC<CameraWebViewProps> = ({ setResult, setCardName, s
 
         {isCameraReady && hasMultipleCameras && (
           // <button onClick={() => setFacingMode(m => m === 'user' ? 'environment' : 'user')} style={buttonStyle('#444')}>Flip</button>
-          <PrimaryButton title="" style={{backgroundColor: "transparent"}} onPress={() => setFacingMode(m => m === 'user' ? 'environment' : 'user')} icon={<FontAwesome6 name="camera-rotate" size={24} color={colors.mutedForeground} />} />
+          <PrimaryButton title="" style={{ backgroundColor: "transparent" }} onPress={() => setFacingMode(m => m === 'user' ? 'environment' : 'user')} icon={<FontAwesome6 name="camera-rotate" size={24} color={colors.mutedForeground} />} />
         )}
       </View>
     </View>

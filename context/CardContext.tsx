@@ -13,6 +13,9 @@ export type CollectionItem = CardMarketCard & {
     quantity: number;
     quantity_foil?: number;
     collection_last_updated?: string; // uc.last_updated
+    expansion_name?: string; // from join with expansions table
+    expansion_code?: string; // from join with expansions table
+    release_date?: string; // from join with expansions table
 };
 
 interface CardContextProps {
@@ -25,6 +28,8 @@ interface CardContextProps {
     removeCard: (cardMarketId: number, quantity?: number, quantity_foil?: number) => Promise<void>;
     tcgName: string;
     setTcgName: (name: string) => void;
+    tcgId: number | null;
+    setTcgId: (id: number | null) => void;
 }
 
 const CardContext = createContext<CardContextProps | undefined>(undefined);
@@ -35,6 +40,7 @@ export const CardProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [cardData, setCardData] = useState<CollectionItem[]>([]);
     const [allCards, setAllCards] = useState<CollectionItem[]>([]);
     const [tcgName, setTcgName] = useState<string>('dragon ball fusion world');
+    const [tcgId, setTcgId] = useState<number | null>(null);
     const { session } = useSession();
 
     // Fetch the collection from the backend
@@ -163,13 +169,13 @@ export const CardProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     useEffect(() => {
         if (session) {
-            fetchCollection();
+            fetchCollection(tcgId ?? undefined);
             fetchAllCardsForTcg();
         }
-    }, [session, tcgName]);
+    }, [session, tcgId]);
 
     return (
-        <CardContext.Provider value={{ cardCollectionData: cardData, addCard, updateCardQuantity, fetchCollection, removeCard, tcgName, setTcgName, allCards, fetchAllCardsForTcg }}>
+        <CardContext.Provider value={{ cardCollectionData: cardData, addCard, updateCardQuantity, fetchCollection, removeCard, tcgName, setTcgName, allCards, fetchAllCardsForTcg, tcgId, setTcgId }}>
             {children}
         </CardContext.Provider>
     );

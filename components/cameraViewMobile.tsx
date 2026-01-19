@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient'; // Install this!
 import { matchCard } from '@/actions/matchCard';
+import { useCardContext } from "@/context/CardContext";
 
 const { width, height } = Dimensions.get('window');
 
@@ -27,6 +28,13 @@ const CameraViewMobile: React.FC<CameraViewProps> = ({ setResult, setPhotoUri })
   const [flash, setFlash] = useState<FlashMode>('off');
   const [loading, setLoading] = useState(false);
   const cameraRef = useRef<CameraView>(null);
+  const { tcgName } = useCardContext();
+
+  const tcgNameRef = useRef(tcgName);
+  useEffect(() => {
+    tcgNameRef.current = tcgName;
+  }, [tcgName]);
+
 
   // --- ANIMATION REFS ---
   const scanAnim = useRef(new Animated.Value(0)).current;
@@ -72,7 +80,7 @@ const CameraViewMobile: React.FC<CameraViewProps> = ({ setResult, setPhotoUri })
   const processImage = async (uri: string) => {
     try {
       if (setPhotoUri) setPhotoUri(uri);
-      const apiResult = await matchCard(uri);
+      const apiResult = await matchCard(uri, tcgNameRef.current);
       const parsed = JSON.parse(apiResult);
       const wrapped = JSON.stringify({
         apiResult: parsed,

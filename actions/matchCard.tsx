@@ -1,17 +1,12 @@
 import { API_ENDPOINT } from "@/constants/apiConfig";
 
-export async function matchCard(uri: string): Promise<string> {
+export async function matchCard(uri: string, tcgName: string): Promise<string> {
     try {
         console.log("Uploading file:");
-
-
-        // log
-
         let uriArray = uri.split(".");
         let fileType = uriArray[uriArray.length - 1];
       
                 let formData = new FormData();
-                // React Native FormData file object uses { uri, name, type } — cast to any for TypeScript
                 formData.append("file", ({
                     uri,
                     name: `photo.${fileType}`,
@@ -28,10 +23,7 @@ export async function matchCard(uri: string): Promise<string> {
               },
         };
 
-        //hello world
-        // fetch("http://192.168.1.3:8000").then(response => response.text()).then(result => console.log(result)).catch(error => console.log('error', error));
-        // Perform the fetch request
-        const result = await fetch(`${API_ENDPOINT}/matchCard`, requestOptions);
+        const result = await fetch(`${API_ENDPOINT}/matchCard?tcg_name=${encodeURIComponent(tcgName)}`, requestOptions);
         const textResult = await result.text();
         console.log(textResult);
         return textResult

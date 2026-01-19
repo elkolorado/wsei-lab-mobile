@@ -103,7 +103,6 @@ const Collection: React.FC = () => {
             <CardItem
               card={item}
               showCollection={true}
-              // Dim cards if we are looking at missing cards or quantity is 0
               dimmed={filterMode === 'unowned' || (item.quantity ?? 0) === 0}
               onPress={(c) => Linking.openURL(c?.card_url).catch(() => {})}
             />
